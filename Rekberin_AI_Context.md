@@ -70,7 +70,7 @@ one_issue_one_person: true
 | Ibrahim | PM + Fullstack Developer | Transaction and QRIS | DEV-01–DEV-04 |
 | Bagas | Fullstack Developer | Database, authentication/role, listing, marketplace integration | DEV-05–DEV-08 |
 | Afiq | Fullstack Developer | Chat, review/rating, notifications/status, CI/CD | DEV-09–DEV-12 |
-| Aufa | Fullstack Developer + QA/DevOps | Buyer/seller/admin dashboards, testing ownership | DEV-13–DEV-16, TEST-01–TEST-02 |
+| Aufa | Fullstack Developer + QA/DevOps | User/admin dashboards, testing ownership | DEV-13, DEV-15–DEV-16 (DEV-14 merged ke DEV-13), TEST-01–TEST-02 |
 
 ```yaml
 github_usernames:
@@ -570,46 +570,34 @@ dod:
   - workflow result is visible to all team members
 ```
 
-### DEV-13 — Menghubungkan Dashboard Buyer
+### DEV-13 — Menghubungkan Dashboard User (Buyer & Seller Unified)
 
 ```yaml
 type: development
 assignee: Aufa
-estimate_days: 3
-depends_on: [DEV-01, DEV-06]
-description: Connect buyer dashboard to real data so a logged-in buyer can see their transaction summary and list.
-responsibility: buyer-dashboard API integration
+estimate_days: 4
+depends_on: [DEV-01, DEV-06, DEV-07]
+description: Connect unified user dashboard (/user) to database/API so a logged-in user can manage both buyer activities (transactions, guarantees, order details) and seller activities (listings, sales orders, balance withdrawal) in a single integrated view.
+responsibility: unified user dashboard API integration (buyer & seller)
 tasks:
-  - fetch transactions belonging to the logged-in buyer
-  - show active and completed transactions
-  - show status and payment amount
-  - connect buttons to transaction detail
-  - add loading and empty-data states
+  - fetch transactions where logged-in user is buyer or seller
+  - show active and completed transactions with tab filtering (Semua, Pembelian, Penjualan)
+  - fetch listings created by the user and connect catalog management
+  - connect balance withdrawal and sales inquiry summaries
+  - connect buttons to unified transaction detail (/user/transactions/[id])
+  - add loading, empty-data, and error states
 dod:
-  - dashboard shows only the logged-in buyer's transactions
-  - status and transaction detail can be opened
-  - dashboard no longer uses dummy transaction data
+  - user dashboard shows unified data for both buyer and seller roles without separate /buyer or /seller routes
+  - status, filters, and transaction details route correctly
+  - dashboard data comes from API/database instead of dummy data
 ```
 
-### DEV-14 — Menghubungkan Dashboard Seller
+### DEV-14 — (Merged ke DEV-13) Dashboard Seller
 
 ```yaml
-type: development
+status: merged_into_dev_13
 assignee: Aufa
-estimate_days: 3
-depends_on: [DEV-07, DEV-06]
-description: Connect seller dashboard to database/API so the seller can see their listings and related transactions.
-responsibility: seller-dashboard listing/transaction integration
-tasks:
-  - fetch listings belonging to the logged-in seller
-  - show listing status
-  - fetch transactions related to seller listings
-  - connect edit/detail actions
-  - add loading and empty-data states
-dod:
-  - seller sees only their own listings and related transactions
-  - dashboard data comes from API/database
-  - edit/detail buttons route correctly
+note: DEV-14 (Dashboard Seller) telah dilebur/diintegrasikan secara penuh ke dalam DEV-13 (Dashboard User) seiring migrasi arsitektur dari endpoint terpisah (/buyer dan /seller) menjadi single unified dashboard (/user) dengan tab switching antara mode Pembeli dan mode Penjual.
 ```
 
 ### DEV-15 — Menghubungkan Dashboard Admin
@@ -639,7 +627,7 @@ dod:
 type: development
 assignee: Aufa
 estimate_days: 3
-depends_on: [DEV-13, DEV-14, DEV-15]
+depends_on: [DEV-13, DEV-15]
 description: Show simple role-appropriate activity summaries on dashboards.
 responsibility: summary-data retrieval and dashboard statistic cards
 tasks:
@@ -714,8 +702,7 @@ parallel_or_supporting:
   - DEV-10 review
   - DEV-11 page states
   - DEV-12 CI/CD
-  - DEV-13 buyer dashboard
-  - DEV-14 seller dashboard
+  - DEV-13 user dashboard (unified buyer & seller, DEV-14 merged)
   - DEV-15 admin dashboard
   - DEV-16 statistics
 testing:
@@ -742,7 +729,7 @@ The sequence is a dependency guide, not a reassignment. Each issue remains owned
 
 - revision: dashboard_ownership
   previous: dashboard assignment was not final
-  current: all dashboard issues DEV-13–DEV-16 are assigned to Aufa
+  current: all dashboard issues DEV-13–DEV-16 are assigned to Aufa (DEV-13 & DEV-14 unified into single DEV-13 User Dashboard)
 
 - revision: ci_cd_ownership
   previous: CI/CD candidate was Afiq or Bagas
@@ -775,6 +762,10 @@ The sequence is a dependency guide, not a reassignment. Each issue remains owned
 - revision: dispute
   previous: generic dispute handling
   current: buyer is the authorized dispute initiator; admin/super admin handle resolution according to role
+
+- revision: dashboard_unification
+  previous: DEV-13 (Dashboard Buyer) and DEV-14 (Dashboard Seller) were separate issues and routes (/buyer and /seller)
+  current: DEV-13 and DEV-14 are unified into a single DEV-13 — Dashboard User (/user); DEV-14 is merged into DEV-13 because the user role now seamlessly combines Buyer and Seller capabilities in one unified interface
 
 - revision: testing
   previous: testing was distributed broadly among developers in an earlier draft
@@ -841,18 +832,228 @@ Rekberin_Rencana_Issue.pdf: detailed issue descriptions; current allocation is r
 
 ## REPOSITORY_IMPLEMENTATION_PROGRESS
 
-### DEV-12 - CI/CD
+### DEV-05 — Menyiapkan Database
 
-DEV-12 is assigned to Afiq and has been implemented on branch `feat/dev-12-ci-cd`.
+```yaml
+status: completed
+assignee: Bagas
+branch: bagas/DatabasePreparation
+merged_to_main: true
+commits:
+  - af70a62 feat : Menyiapkan Database(Dev-05)
+  - cf857a4 Fix : Logic error
+```
 
-- Added the `typecheck` script to `package.json` using `tsc --noEmit`.
+- Prisma schema disiapkan dengan model-model utama (User, Listing, Transaction, ChatMessage, Review, dll).
+- Migrasi database berhasil dijalankan.
+- Seed data untuk development disediakan.
+- PR #20 dan #24 sudah di-merge ke `main`.
+
+---
+
+### DEV-12 — Menyiapkan CI/CD
+
+```yaml
+status: completed
+assignee: Afiq
+branch: feat/dev-12-ci-cd
+merged_to_main: true
+commits:
+  - 7b1d3bb chore: add CI workflow
+  - 81b6e0e docs: add AI project context
+  - 86125d8 merge main and consolidate AI context
+```
+
+- Added `typecheck` script ke `package.json` (`tsc --noEmit`).
 - Added `.github/workflows/ci.yml`.
-- CI runs on pull requests and pushes to `main`.
-- CI uses Node.js 20 and installs dependencies with `npm ci`.
-- CI runs `npm run typecheck` and `npm run build`.
-- Local typecheck and production build both passed.
-- The CI check on the pull request passed.
-- The implementation commit is `7b1d3bb chore: add CI workflow`.
-- The context update was originally committed as `81b6e0e docs: add AI project context` and is being consolidated into this canonical file during conflict resolution.
+- CI berjalan pada pull request dan push ke `main`.
+- CI menggunakan Node.js 20, `npm ci`, `npm run typecheck`, dan `npm run build`.
+- Local typecheck dan production build passed.
+- PR #21 dan #25 sudah di-merge ke `main`.
+- File `Rekberin_AI_Context.md` di-consolidate saat conflict resolution.
 
-The pull request must be reviewed and merged into `main` after this conflict-resolution commit. Do not commit `.env` or `.env.local`; use `.env.example` for documented environment variables.
+---
+
+### Aufa — Dashboard & UI Development (DEV-13/15/16 Progress — DEV-13 Unified User, DEV-14 Merged)
+
+Seluruh progress di bawah ini dikerjakan oleh Aufa pada branch `dashboard` melalui multiple development sessions menggunakan AI pair programming. Berikut kronologi lengkapnya:
+
+#### Dev Session 1 — Foundation & Homepage Revamp
+
+```yaml
+commit: c1bf2ff first commit
+commit: 1c58882 feat: revamp homepage with Glints style, add bookmark feature, and fix back navigation scroll restoration
+commit: cd18903 fix(build): add prisma generate to build and postinstall scripts for Vercel
+files_changed: 14 files, +601 -35
+```
+
+**Perubahan:**
+- Setup project awal Next.js 14 + Prisma + TailwindCSS.
+- Revamp halaman homepage dengan desain terinspirasi Glints — hero search, featured grid.
+- Tambah fitur bookmark listing.
+- Tambah halaman Tentang Kami (`/tentang-kami`).
+- Fix scroll restoration saat navigasi back.
+- Fix build Vercel dengan menambah `prisma generate` ke script `build` dan `postinstall`.
+- Tambah komponen: `HeroSearch`, `FeaturedGrid`, `DetailBackButton`, `SmoothScrollProvider`.
+
+#### Dev Session 2 — PWA Support & Mobile Enhancements
+
+```yaml
+commit: 4aad152 feat: add PWA support and mobile enhancements
+files_changed: 11 files, +701 -255
+```
+
+**Perubahan:**
+- Tambah Progressive Web App (PWA) support: `manifest.ts`, service worker (`sw.js`), offline page.
+- Generate app icons (192px, 512px, apple-icon).
+- Enhance `ListingsExplorer` untuk mobile responsiveness.
+- Tambah `ServiceWorkerRegister` provider.
+
+#### Dev Session 3 — Room Chat 3 Arah, Payment Modal, Dispute, Uploader Iklan
+
+```yaml
+commit: 60941d6 feat: tambahkan room chat 3 arah, payment modal, vault akun, dispute, dan uploader iklan
+files_changed: 29 files, +3629 -205
+```
+
+**Perubahan:**
+- **Room Chat 3 Arah** (`TransactionChat.tsx`): Chat real-time (polling) antara buyer, seller, dan admin dalam satu transaksi. Fitur: pesan teks, upload gambar, system messages, auto-scroll, typing indicator.
+- **Payment Modal** (`PaymentModal.tsx`): Modal pembayaran dengan QRIS placeholder, detail harga, dan upload bukti transfer.
+- **Account Vault** (`AccountVaultPanel.tsx`): Panel vault untuk penyerahan detail akun game secara aman.
+- **Dispute Modal** (`DisputeModal.tsx`): Form laporan masalah transaksi oleh buyer.
+- **Invoice Modal** (`InvoiceModal.tsx`): Preview invoice/nota transaksi.
+- **Create Listing Form** (`CreateListingForm.tsx`): Form upload iklan baru dengan multi-image upload, validasi field.
+- **Listing Chat Launcher** (`ListingChatLauncher.tsx`): Komponen tanya-jawab pada halaman listing.
+- **Image Gallery** (`ImageGallery.tsx`): Galeri gambar listing dengan lightbox.
+- **Share Listing Button** (`ShareListingButton.tsx`): Tombol share listing ke social media.
+- **Transaction Views**: `BuyerTransactionView.tsx`, `SellerTransactionView.tsx`, `AdminTransactionView.tsx` — tampilan detail transaksi per role.
+- **Buyer/Seller transaction pages**: Halaman list dan detail transaksi.
+- **BuyPanel.tsx**: Panel beli pada halaman detail listing.
+- **Listing Discussion** (`ListingDiscussion.tsx`): Diskusi/tanya jawab publik pada listing.
+- Extended `data/dummy.ts` dengan data transaksi, chat, dan review.
+- Extended `store/useStore.ts` dengan state management untuk transaksi dan chat.
+- Extended `types/index.ts` dengan tipe Transaction, ChatMessage, Review.
+
+#### Dev Session 4 — Dashboard UI Enhancement & Listing Discussion Carry-to-Chat
+
+```yaml
+commit: 3ad7425 feat: enhance dashboard UI for buyer/seller/admin + listing discussion carry-to-chat
+files_changed: 15 files, +3015 -272
+```
+
+**Perubahan:**
+- **Admin Dashboard** (`admin/page.tsx`): Redesign total — statistik overview, tabel transaksi, panel verifikasi pembayaran, status cards.
+- **Buyer Dashboard** (`buyer/page.tsx`): Redesign — statistik pembelian, riwayat transaksi dengan filter, detail transaksi modal, klaim garansi.
+- **Seller Dashboard** (`seller/page.tsx`): Redesign — statistik penjualan, inquiry masuk, pesanan aktif, kelola katalog iklan.
+- **DashboardSidebar** (`DashboardSidebar.tsx`): Overhaul sidebar — role-based config (buyer/seller/admin), badge verifikasi, menu dinamis, responsive design.
+- **Navbar** (`Navbar.tsx`): Update dropdown dashboard navigation.
+- **Admin Transactions List** (`admin/transactions/page.tsx`): Tabel daftar transaksi admin.
+- **Seller/Buyer Transaction Pages**: Update list transaksi per role.
+- **Listing Discussion**: Carry pertanyaan dari diskusi listing ke room chat transaksi.
+
+#### Dev Session 5 — Dashboard Redesign & Unifikasi User Page
+
+```yaml
+commit: b6e71f1 feat(dashboard): redesign user dashboard layout with 3-column cards, remove vault and redundant stats/banners, update seller listings
+files_changed: 4 files, +1144 -36
+```
+
+**Perubahan:**
+- **User Dashboard Unified** (`user/page.tsx`): Buat halaman `/user` sebagai single unified dashboard menggantikan `/buyer` dan `/seller` terpisah. Menggunakan tab "Sebagai Pembeli" dan "Sebagai Penjual" dalam satu halaman.
+- **Sebagai Pembeli**: Panduan Garansi 48 jam, riwayat pembelian dengan filter dan detail modal, klaim garansi.
+- **Sebagai Penjual**: Tarik Saldo (Rp 2.450.000), inquiry masuk, pesanan aktif, kelola katalog iklan, pasang iklan baru.
+- **DashboardSidebar**: Tambah config `user` role dengan menu unified.
+- **Admin ActionPanel**: Minor update pada panel aksi admin.
+- Hapus vault panel dan stats/banners yang redundan.
+
+#### Dev Session 6 — Build Fix (Vercel)
+
+```yaml
+commit: 0d50a0a fix(build): wrap user dashboard in Suspense boundary to fix prerender error on Vercel
+files_changed: 1 file, +17 -2
+```
+
+**Perubahan:**
+- Wrap `UserDashboardContent` dalam `<Suspense>` boundary karena menggunakan `useSearchParams()` yang memerlukan Suspense pada Next.js prerender.
+- Fix error Vercel deployment.
+
+#### Dev Session 7 — Branding Rename RekberGG → Rekberin
+
+```yaml
+commit: 6007aa7 chore(branding): rename brand identity from RekberGG to Rekberin across entire project
+files_changed: 37 files, +68 -69
+```
+
+**Perubahan:**
+- Rename semua referensi "RekberGG" menjadi "Rekberin" di seluruh project.
+- Termasuk: halaman auth, dashboard, marketplace, komponen UI, layout, footer, navbar, store, PRD, manifest, service worker, dummy data, package.json.
+- 37 file diubah secara konsisten.
+
+#### Dev Session 8 — Migrasi Buyer/Seller ke Unified User Architecture
+
+```yaml
+commit: d192815 refactor: migrate buyer/seller endpoints to unified /user architecture
+branch: dashboard
+files_changed: 18 files, +525 -1651
+build_status: passed (0 errors)
+```
+
+**Perubahan:**
+- **ARSITEKTUR BESAR**: Migrasi dari endpoint terpisah `/buyer` dan `/seller` menjadi satu endpoint unified `/user`.
+- **Navbar** (`Navbar.tsx`): Dropdown hanya menampilkan "Dashboard User" (`/user`) dan "Dashboard Admin" (`/admin`). Mobile drawer juga diupdate 2 kolom.
+- **DashboardSidebar** (`DashboardSidebar.tsx`): Config `buyer` dan `user` disinkronkan — badge "USER Terverifikasi", title "Akun Saya", menu: Dashboard, Riwayat Transaksi, Katalog Akun Game, Pasang Iklan Baru. Path matching dibersihkan (hapus `/buyer` dan `/seller` dari exclusion array).
+- **User Dashboard** (`user/page.tsx`): Semua link internal diupdate — `/seller/transactions/...` → `/user/transactions/...`, `/seller/listings/new` → `/listings/new`, `/buyer/transactions/...` → `/user/transactions/...`. Fix transactionId mismatch (`tx_1` → `trx_1`).
+- **[NEW] User Transactions** (`user/transactions/page.tsx`): Halaman riwayat transaksi unified dengan filter (Semua, Pembelian, Penjualan).
+- **[NEW] User Transaction Detail** (`user/transactions/[id]/page.tsx`): Halaman detail transaksi & room chat — auto-detect apakah user sebagai buyer atau seller berdasarkan data transaksi.
+- **BuyerTransactionView** & **SellerTransactionView**: Sidebar diupdate ke `<DashboardSidebar role="user" />`, back link ke `/user/transactions`.
+- **BuyPanel.tsx**: Redirect setelah beli → `/user/transactions/...`.
+- **ListingChatLauncher.tsx**: Link room chat → `/user/transactions/...`.
+- **[DELETED] `app/(dashboard)/buyer/`**: Seluruh direktori dihapus (page.tsx, transactions/page.tsx, transactions/[id]/page.tsx).
+- **[DELETED] `app/(dashboard)/seller/`**: Seluruh direktori dihapus (page.tsx, transactions/page.tsx, transactions/[id]/page.tsx, listings/page.tsx, listings/new/page.tsx).
+- **Verifikasi**: `npm run build` passed (0 errors), grep scan seluruh codebase — 0 referensi `/buyer` atau `/seller` tersisa.
+
+**Route structure setelah migrasi:**
+
+```text
+/user                     → Dashboard User (Static)
+/user/transactions        → Riwayat Transaksi Unified (Static)
+/user/transactions/[id]   → Detail Transaksi & Room Chat (Dynamic)
+/admin                    → Dashboard Admin (Static)
+/admin/transactions       → Daftar Transaksi Admin (Static)
+/admin/transactions/[id]  → Detail Transaksi Admin (Dynamic)
+/listings                 → Marketplace (Dynamic)
+/listings/[id]            → Detail Listing (Dynamic)
+/listings/new             → Pasang Iklan Baru (Static)
+/login                    → Login (Static)
+/register                 → Register (Static)
+/rekber                   → Daftar Rekber (Static)
+/rekber/[username]        → Profil Rekber (Dynamic)
+/tentang-kami             → Tentang Kami (Static)
+```
+
+---
+
+### Progress Summary per DEV Issue
+
+| Issue | Status | Branch | Catatan |
+|---|---|---|---|
+| DEV-05 Database | ✅ Completed | `bagas/DatabasePreparation` | Merged to main |
+| DEV-06 Auth & Role | 🔲 Not started | - | Assigned: Bagas |
+| DEV-07 Listing Management | 🔲 Not started | - | Assigned: Bagas |
+| DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
+| DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-02 QRIS/Payment | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-09 Chat | 🔲 Not started | - | Assigned: Afiq |
+| DEV-10 Review/Rating | 🔲 Not started | - | Assigned: Afiq |
+| DEV-11 Notifications | 🔲 Not started | - | Assigned: Afiq |
+| DEV-12 CI/CD | ✅ Completed | `feat/dev-12-ci-cd` | Merged to main |
+| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer (eks DEV-13) & Seller (eks DEV-14) jadi 1 dashboard (`/user`). UI selesai, perlu integrasi API |
+| DEV-14 Dashboard Seller | 🔄 Merged ke DEV-13 | `dashboard` | Dilebur ke dalam DEV-13 (Arsitektur Unified User Dashboard) |
+| DEV-15 Dashboard Admin | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
+| DEV-16 Dashboard Statistics | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
+| TEST-01 Alur Testing | 🔲 Not started | - | Assigned: Aufa |
+| TEST-02 Testing | 🔲 Not started | - | Assigned: Aufa |
+
+> **Catatan**: DEV-13 (User Dashboard — gabungan Buyer & Seller), DEV-15 (Admin Dashboard), dan DEV-16 (Statistik) sudah memiliki UI lengkap dengan dummy data. Arsitektur sudah di-refactor ke unified `/user` endpoint. Yang tersisa adalah integrasi dengan API/database setelah DEV-01 sampai DEV-11 selesai diimplementasikan oleh tim.
