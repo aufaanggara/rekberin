@@ -19,15 +19,15 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col lg:flex-row gap-8">
-      <DashboardSidebar role="seller" />
+      <DashboardSidebar role="user" />
       <div className="flex-1 space-y-6">
         {/* Top Header */}
         <div>
           <Link
-            href="/seller/transactions"
+            href="/user/transactions"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 mb-2"
           >
-            <ArrowLeft size={14} /> Kembali ke Transaksi Penjualan
+            <ArrowLeft size={14} /> Kembali ke Riwayat Transaksi
           </Link>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

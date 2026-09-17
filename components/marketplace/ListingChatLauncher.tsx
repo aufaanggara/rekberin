@@ -99,7 +99,7 @@ export function ListingChatLauncher({
 
               <div className="flex items-center gap-2 shrink-0">
                 <Link
-                  href={`/buyer/transactions/${transactionId}`}
+                  href={`/user/transactions/${transactionId}`}
                   className="text-[11px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-colors"
                   title="Buka di halaman penuh dashboard"
                 >
