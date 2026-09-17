@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { ShieldCheck, Menu, X, PlusCircle, ChevronRight, MessageSquare, User, LayoutDashboard, Store } from "lucide-react";
+import { ShieldCheck, Menu, X, PlusCircle, ChevronRight, MessageSquare, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const links = [
@@ -54,7 +54,7 @@ export function Navbar() {
         {/* Action Buttons */}
         <div className="hidden sm:flex items-center gap-3">
           {/* Quick link to Transactions & Live Chat */}
-          <Link href="/buyer/transactions">
+          <Link href="/user/transactions">
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 text-xs font-semibold text-slate-700 hover:text-blue-700 transition-all cursor-pointer">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -83,22 +83,16 @@ export function Navbar() {
                   Pilih Tampilan:
                 </div>
                 <Link
-                  href="/buyer"
+                  href="/user"
                   className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-blue-600 font-medium"
                 >
-                  <User size={13} className="text-blue-500" /> Dashboard Pembeli
-                </Link>
-                <Link
-                  href="/seller"
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-emerald-600 font-medium"
-                >
-                  <Store size={13} className="text-emerald-500" /> Dashboard Penjual
+                  <User size={13} className="text-blue-500" /> Dashboard User
                 </Link>
                 <Link
                   href="/admin"
                   className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-amber-600 font-medium"
                 >
-                  <ShieldCheck size={13} className="text-amber-500" /> Dashboard Admin Rekber
+                  <ShieldCheck size={13} className="text-amber-500" /> Dashboard Admin
                 </Link>
               </div>
             )}
@@ -149,27 +143,20 @@ export function Navbar() {
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
               Pilih Role Dashboard:
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Link
-                href="/buyer"
+                href="/user"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1 p-2 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold"
               >
-                <User size={13} /> Buyer
-              </Link>
-              <Link
-                href="/seller"
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1 p-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold"
-              >
-                <Store size={13} /> Seller
+                <User size={13} /> Dashboard User
               </Link>
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1 p-2 rounded-xl bg-amber-50 text-amber-700 text-xs font-semibold"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-amber-50 text-amber-700 text-xs font-semibold"
               >
-                <ShieldCheck size={13} /> Admin
+                <ShieldCheck size={13} /> Dashboard Admin
               </Link>
             </div>
           </div>

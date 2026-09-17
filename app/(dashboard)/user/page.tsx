@@ -83,8 +83,8 @@ const initialWithdrawals: WithdrawalRecord[] = [
 ];
 
 const initialInquiries: Inquiry[] = [
-  { id: "inq_1", listingId: "1", transactionId: "tx_1", listingTitle: "Akun Diamond League 89 OVR Full Squad Legend", buyerName: "Dimas Anggara", question: "Halo gan, Konami ID nya apakah bisa langsung diganti ke email baru saya saat transaksi rekber?", time: "15 mnt lalu", replied: false },
-  { id: "inq_2", listingId: "2", transactionId: "tx_2", listingTitle: "Akun eFootball Divisi 1", buyerName: "Rizky_Gamer", question: "Ada Big Time Haaland atau Messi 2022 gan di akun ini?", time: "1 jam lalu", replied: true },
+  { id: "inq_1", listingId: "1", transactionId: "trx_1", listingTitle: "Akun Diamond League 89 OVR Full Squad Legend", buyerName: "Dimas Anggara", question: "Halo gan, Konami ID nya apakah bisa langsung diganti ke email baru saya saat transaksi rekber?", time: "15 mnt lalu", replied: false },
+  { id: "inq_2", listingId: "2", transactionId: "trx_2", listingTitle: "Akun eFootball Divisi 1", buyerName: "Rizky_Gamer", question: "Ada Big Time Haaland atau Messi 2022 gan di akun ini?", time: "1 jam lalu", replied: true },
 ];
 
 function UserDashboardContent() {
@@ -106,13 +106,15 @@ function UserDashboardContent() {
   const [claimModalTx, setClaimModalTx] = useState<Transaction | null>(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<string[]>(["lst_1", "lst_2"]);
+  const [isWarrantyGuideOpen, setIsWarrantyGuideOpen] = useState(false);
 
   // ── Seller state ─────────────────────────────────────────────────────────────
   const [listingFilter, setListingFilter] = useState<"ALL" | "AVAILABLE" | "SOLD">("ALL");
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [withdrawContext, setWithdrawContext] = useState<"buyer" | "seller">("buyer");
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [selectedBank, setSelectedBank] = useState("BCA");
-  const [withdrawAmountInput, setWithdrawAmountInput] = useState("2.450.000");
+  const [withdrawAmountInput, setWithdrawAmountInput] = useState("350.000");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showWithdrawHistory, setShowWithdrawHistory] = useState(false);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>(initialWithdrawals);
@@ -160,10 +162,11 @@ function UserDashboardContent() {
   };
   const handleWithdraw = (e: React.FormEvent) => {
     e.preventDefault();
+    const amountVal = withdrawContext === "buyer" ? 350000 : 2450000;
     const newRecord: WithdrawalRecord = {
       id: `WD-${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " WIB",
-      amount: 2450000,
+      amount: amountVal,
       bank: selectedBank,
       accountNumber: "8920192819",
       status: "PROCESSING",
@@ -231,6 +234,40 @@ function UserDashboardContent() {
         ══════════════════════════════════════════════════════════════════════ */}
         {activeTab === "buyer" && (
           <div className="space-y-6 animate-in fade-in duration-200">
+
+            {/* Kotakan Panduan Garansi */}
+            <div className="group relative overflow-hidden bg-white hover:bg-blue-50/20 rounded-2xl border border-slate-200 hover:border-blue-300 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                      <ShieldCheck size={22} className="stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Proteksi Escrow Rekberin
+                        </span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                          Garansi 48 Jam
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-900 mt-0.5">Panduan Garansi & Klaim</h3>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                  Perlindungan 100% uang kembali dari risiko hackback. Ketahui syarat klaim, alur pengaduan admin, dan tips aman.
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsWarrantyGuideOpen(true)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <ShieldCheck size={15} />
+                <span>Klik untuk Panduan Garansi</span>
+              </Button>
+            </div>
 
             {/* Transactions List */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -472,18 +509,56 @@ function UserDashboardContent() {
         ══════════════════════════════════════════════════════════════════════ */}
         {activeTab === "seller" && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Seller Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Saldo Siap Tarik</p>
-                  <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
-                  <button onClick={() => setShowWithdrawHistory(!showWithdrawHistory)} className="text-[11px] text-emerald-700 font-bold mt-1 inline-flex items-center gap-1 hover:underline">
-                    <History size={12} /> {showWithdrawHistory ? "Tutup Log" : "Lihat Log Penarikan"}
-                  </button>
+
+            {/* Kotakan Tarik Saldo */}
+            <div className="group relative overflow-hidden bg-white hover:bg-emerald-50/20 rounded-2xl border border-slate-200 hover:border-emerald-300 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                      <Wallet size={22} className="stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Saldo Hasil Penjualan
+                        </span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Siap Ditarik
+                        </span>
+                      </div>
+                      <p className="text-2xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><Wallet size={22} /></div>
+                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                  Hasil penjualan akun game yang telah selesai masa rekber dan siap dicairkan langsung ke rekening bank atau e-wallet Anda.
+                </p>
               </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => {
+                    setWithdrawContext("seller");
+                    setWithdrawAmountInput("2.450.000");
+                    setIsWithdrawModalOpen(true);
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                >
+                  <ArrowUpRight size={15} />
+                  <span>Klik untuk Tarik Saldo</span>
+                </Button>
+                <button
+                  onClick={() => setShowWithdrawHistory(!showWithdrawHistory)}
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <History size={14} />
+                  <span>{showWithdrawHistory ? "Tutup Log" : "Riwayat"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Seller Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Dana di Escrow</p>
@@ -577,7 +652,7 @@ function UserDashboardContent() {
                           <Eye size={12} /> Lihat Postingan
                         </Link>
                         <span className="text-slate-300">•</span>
-                        <Link href={`/seller/transactions/${inq.transactionId || "tx_1"}`} className="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+                        <Link href={`/user/transactions/${inq.transactionId || "trx_1"}`} className="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
                           <MessageSquare size={12} /> Lanjut di Room Chat Rekber →
                         </Link>
                       </div>
@@ -613,7 +688,7 @@ function UserDashboardContent() {
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <h3 className="font-bold text-slate-900 text-sm sm:text-base">Pesanan & Serah Terima yang Sedang Berjalan</h3>
                   </div>
-                  <Link href="/seller/transactions">
+                  <Link href="/user/transactions">
                     <span className="text-xs text-emerald-600 hover:text-emerald-700 font-bold">Lihat Semua Pesanan →</span>
                   </Link>
                 </div>
@@ -629,7 +704,7 @@ function UserDashboardContent() {
                           Pembeli: <strong>{order.buyer.username}</strong> • Admin: <strong>{order.admin.user.username}</strong> • {formatRupiah(order.price)}
                         </p>
                       </div>
-                      <Link href={`/seller/transactions/${order.id}`}>
+                      <Link href={`/user/transactions/${order.id}`}>
                         <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">Buka Room Serah Terima</Button>
                       </Link>
                     </div>
@@ -656,7 +731,7 @@ function UserDashboardContent() {
                       </button>
                     ))}
                   </div>
-                  <Link href="/seller/listings/new">
+                  <Link href="/listings/new">
                     <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
                       <PlusCircle size={13} className="mr-1" /> Iklan Baru
                     </Button>
@@ -757,7 +832,14 @@ function UserDashboardContent() {
 
             {/* Tarik Saldo Button */}
             <div className="flex justify-end">
-              <Button onClick={() => setIsWithdrawModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm">
+              <Button
+                onClick={() => {
+                  setWithdrawContext("seller");
+                  setWithdrawAmountInput("2.450.000");
+                  setIsWithdrawModalOpen(true);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm"
+              >
                 <ArrowUpRight size={16} className="mr-1.5" /> Tarik Saldo Penjualan
               </Button>
             </div>
@@ -899,7 +981,7 @@ function UserDashboardContent() {
                   </Button>
                 )}
               </div>
-              <Link href={`/buyer/transactions/${selectedDetailTx.id}`} className="flex-1 sm:flex-initial">
+              <Link href={`/user/transactions/${selectedDetailTx.id}`} className="flex-1 sm:flex-initial">
                 <Button
                   size="sm"
                   className={`w-full sm:w-auto text-xs font-bold ${
@@ -967,21 +1049,27 @@ function UserDashboardContent() {
       )}
 
       {isWithdrawModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            <button onClick={() => setIsWithdrawModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1"><X size={18} /></button>
+            <button onClick={() => setIsWithdrawModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"><X size={18} /></button>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center"><Wallet size={20} /></div>
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Tarik Saldo Penjualan</h3>
-                <p className="text-xs text-slate-400">Saldo tersedia: Rp 2.450.000</p>
+                <h3 className="font-bold text-slate-900 text-base">
+                  {withdrawContext === "buyer" ? "Tarik Saldo Rekber & Refund" : "Tarik Saldo Penjualan"}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Saldo tersedia: {withdrawContext === "buyer" ? "Rp 350.000" : "Rp 2.450.000"}
+                </p>
               </div>
             </div>
             {withdrawSuccess ? (
               <div className="py-8 text-center space-y-3">
                 <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto"><Check size={28} /></div>
                 <h4 className="font-bold text-slate-900 text-lg">Permintaan Penarikan Berhasil!</h4>
-                <p className="text-xs text-slate-500 max-w-xs mx-auto">Dana Rp 2.450.000 sedang diproses ke rekening {selectedBank} milikmu (5-15 menit).</p>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  Dana {withdrawContext === "buyer" ? "Rp 350.000" : "Rp 2.450.000"} sedang diproses ke rekening {selectedBank} milikmu (5-15 menit).
+                </p>
               </div>
             ) : (
               <form onSubmit={handleWithdraw} className="space-y-4">
@@ -998,7 +1086,7 @@ function UserDashboardContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Nomor Rekening:</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Nomor Rekening / E-Wallet:</label>
                   <input type="text" defaultValue="8920192819" className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-600" required />
                 </div>
                 <div>
@@ -1010,6 +1098,149 @@ function UserDashboardContent() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Panduan Garansi Modal ──────────────────────────────────────────────── */}
+      {isWarrantyGuideOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100 relative animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white flex items-start justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 text-white flex items-center justify-center backdrop-blur-md shrink-0 shadow-inner">
+                  <ShieldCheck size={26} className="stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white/20 text-blue-100">
+                      Garansi Resmi Rekberin
+                    </span>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950">
+                      100% Proteksi
+                    </span>
+                  </div>
+                  <h3 className="font-black text-xl text-white">Panduan Garansi Anti-Hackback 48 Jam</h3>
+                  <p className="text-xs text-blue-100/90 mt-0.5">
+                    Perlindungan penuh untuk transaksi beli akun game dengan jaminan uang kembali.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsWarrantyGuideOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Content */}
+            <div className="p-5 sm:p-6 space-y-6 overflow-y-auto">
+              {/* Highlight Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3.5">
+                  <div className="flex items-center gap-2 text-blue-700 font-bold text-xs mb-1">
+                    <Clock size={16} />
+                    <span>Masa 48 Jam</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Garansi otomatis aktif tepat saat serah terima akun selesai dan dikonfirmasi pembeli.
+                  </p>
+                </div>
+                <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3.5">
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs mb-1">
+                    <CheckCircle2 size={16} />
+                    <span>100% Refund</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Pengembalian saldo penuh jika akun ditarik kembali atau di-hackback penjual.
+                  </p>
+                </div>
+                <div className="bg-purple-50/70 border border-purple-100 rounded-2xl p-3.5">
+                  <div className="flex items-center gap-2 text-purple-700 font-bold text-xs mb-1">
+                    <AlertCircle size={16} />
+                    <span>Respon &lt; 2 Jam</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Admin rekber berlisensi resmi langsung menangani sengketa dan membekukan dana seller.
+                  </p>
+                </div>
+              </div>
+
+              {/* Detail Sections */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-2">
+                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">1</span>
+                    Cakupan yang Dijamin Garansi
+                  </h4>
+                  <ul className="text-xs text-slate-600 space-y-2 pl-8 list-disc">
+                    <li>
+                      <strong className="text-slate-800">Hackback / Pemulihan Akun:</strong> Akun di-recover atau password diubah paksa oleh penjual/pemilik pertama dalam masa 48 jam.
+                    </li>
+                    <li>
+                      <strong className="text-slate-800">Spesifikasi Tidak Sesuai:</strong> Item, squad, atau level game berbeda fatal dengan apa yang diiklankan di listing.
+                    </li>
+                    <li>
+                      <strong className="text-slate-800">Sanksi Banned Sebelumnya:</strong> Akun terkena suspend akibat pelanggaran yang dilakukan penjual sebelum transaksi.
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-2">
+                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">2</span>
+                    Alur Cara Klaim Garansi
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">A</span>
+                      <p className="text-xs text-slate-700">
+                        Buka transaksi di <strong>Dashboard User (Sebagai Pembeli)</strong> dan klik tombol <strong>Klaim Garansi</strong> pada kartu pesanan yang telah selesai.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">B</span>
+                      <p className="text-xs text-slate-700">
+                        Unggah bukti otentik seperti screenshot gagal login, email notifikasi pengubahan email pemulihan, atau riwayat login yang mencurigakan.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">C</span>
+                      <p className="text-xs text-slate-700">
+                        Admin Rekber resmi akan memverifikasi. Jika terbukti valid, dana langsung ditransfer kembali ke Saldo Rekber Anda dan siap ditarik kapan saja.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <h5 className="font-bold text-amber-900 text-xs flex items-center gap-1.5 mb-1.5">
+                    <AlertCircle size={14} className="text-amber-600" />
+                    Ketentuan Penting Menjaga Keabsahan Garansi
+                  </h5>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Pembeli wajib segera mengganti password, email pemulihan, dan mengaktifkan verifikasi 2 langkah (2FA) saat serah terima. Garansi tidak berlaku jika pembeli menggunakan cheat/aplikasi ilegal pihak ketiga atau membagikan kredensial ke pihak lain di luar Rekberin.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+              <Link href="/tentang-kami">
+                <Button variant="secondary" size="sm" className="text-xs font-semibold text-slate-600">
+                  Pelajari Selengkapnya di FAQ →
+                </Button>
+              </Link>
+              <Button
+                onClick={() => setIsWarrantyGuideOpen(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2"
+              >
+                Mengerti & Tutup
+              </Button>
+            </div>
           </div>
         </div>
       )}

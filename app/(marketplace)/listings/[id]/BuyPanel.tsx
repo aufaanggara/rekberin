@@ -22,7 +22,7 @@ export function BuyPanel({ listingId }: { listingId: string }) {
     const targetId = tx ? tx.id : "trx_4";
 
     setTimeout(() => {
-      router.push(`/buyer/transactions/${targetId}`);
+      router.push(`/user/transactions/${targetId}`);
     }, 600);
   }
 

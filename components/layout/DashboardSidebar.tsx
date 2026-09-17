@@ -35,9 +35,9 @@ interface NavItem {
 
 const roleConfig = {
   buyer: {
-    title: "Akun Pembeli",
+    title: "Akun Saya",
     color: "blue",
-    badge: "Buyer Terverifikasi",
+    badge: "USER Terverifikasi",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
     name: "Dimas Anggara",
     tag: "@buyer_dimas",
@@ -49,9 +49,10 @@ const roleConfig = {
       { id: "n2", title: "Garansi Akun Aktif", desc: "Garansi anti-hackback 48 jam untuk pesanan #tx_3 sedang berjalan.", time: "2 jam lalu", unread: false },
     ],
     items: [
-      { href: "/buyer", label: "Overview", icon: LayoutDashboard },
-      { href: "/buyer/transactions", label: "Riwayat Transaksi", icon: Receipt },
+      { href: "/user", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
+      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
   seller: {
@@ -69,10 +70,10 @@ const roleConfig = {
       { id: "n4", title: "Penarikan Dana Berhasil", desc: "Pencairan saldo Rp 1.500.000 ke BCA telah berhasil.", time: "1 hari lalu", unread: false },
     ],
     items: [
-      { href: "/seller", label: "Overview", icon: LayoutDashboard },
-      { href: "/seller/transactions", label: "Transaksi Penjualan", icon: Receipt },
-      { href: "/seller/listings", label: "Kelola Listing", icon: Package },
-      { href: "/seller/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller", label: "Overview", icon: LayoutDashboard },
+      { href: "/user/transactions", label: "Transaksi Penjualan", icon: Receipt },
+      { href: "/user?tab=seller", label: "Kelola Listing", icon: Package },
+      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
   admin: {
@@ -111,8 +112,9 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/listings", label: "Katalog Akun Game", icon: Package },
-      { href: "/seller/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
+      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
+      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
 };
@@ -281,7 +283,7 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
           {currentRole.items.map((item) => {
             const active =
               pathname === item.href ||
-              (!["/buyer", "/seller", "/admin"].includes(item.href) &&
+              (!["/admin", "/user"].includes(item.href) &&
                 pathname.startsWith(item.href));
 
             return (
