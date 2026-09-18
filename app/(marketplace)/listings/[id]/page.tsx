@@ -1,52 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { notFound } from "next/navigation";
-import { Star, ShieldCheck, Sparkles, Trophy, Coins, Wallet, CheckCircle2, Lock, ArrowLeft, MessageCircle, Info } from "lucide-react";
+import { Star, ShieldCheck, Sparkles, Lock, Info, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { dummyListings, dummyReviews, dummyTransactions } from "@/data/dummy";
-import { useStore } from "@/store/useStore";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { dummyReviews } from "@/data/dummy";
 import { Avatar } from "@/components/ui/Avatar";
-import { formatRupiah, waLink } from "@/lib/utils";
+import { formatRupiah } from "@/lib/utils";
+import { useListing } from "@/hooks/useListings";
 import { BuyPanel } from "./BuyPanel";
 import { ImageGallery } from "./ImageGallery";
-import { ListingChatLauncher } from "@/components/marketplace/ListingChatLauncher";
-import { ListingDiscussion } from "@/components/marketplace/ListingDiscussion";
 import { ShareListingButton } from "@/components/marketplace/ShareListingButton";
 
 import { DetailBackButton } from "@/components/marketplace/DetailBackButton";
 
 export default function ListingDetailPage({ params }: { params: { id: string } }) {
-  const { listings } = useStore();
-  const [mounted, setMounted] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const { data: listing, isLoading, error, refetch } = useListing(params.id);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const listing =
-    listings.find((l) => l.id === params.id) ||
-    dummyListings.find((l) => l.id === params.id);
-
-  if (!listing) {
-    if (!mounted) {
-      return (
-        <div className="bg-slate-50 min-h-screen py-24 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm font-semibold text-slate-600">Memuat detail akun...</p>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20" aria-busy="true" aria-live="polite">
+        <div className="h-5 w-64 rounded bg-slate-200 animate-pulse" />
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="h-[34rem] rounded-2xl bg-slate-200 animate-pulse" />
+          <div className="h-80 rounded-2xl bg-slate-200 animate-pulse" />
         </div>
-      );
-    }
-    return notFound();
+      </div>
+    );
   }
 
-  const matchedTx = dummyTransactions.find((t) => t.listing.id === listing.id);
-  const transactionId = matchedTx ? matchedTx.id : "trx_4";
+  if (error || !listing) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-20 text-center">
+        <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm" role="alert">
+          <h1 className="text-lg font-bold text-slate-900">Listing tidak dapat dibuka</h1>
+          <p className="mt-2 text-sm text-slate-500">{error ?? "Listing tidak ditemukan."}</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-700"
+            >
+              <RefreshCw size={15} aria-hidden="true" /> Coba lagi
+            </button>
+            <Link
+              href="/listings"
+              className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Kembali ke katalog
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const listingStatusLabel =
+    listing.status === "AVAILABLE"
+      ? "Akun Ready"
+      : listing.status === "IN_TRANSACTION"
+        ? "Dalam Transaksi"
+        : listing.status === "SOLD"
+          ? "Terjual"
+          : "Tidak Aktif";
 
   return (
     <div className="bg-slate-50 min-h-screen py-6 sm:py-8 pb-20 lg:pb-8">
@@ -75,9 +89,13 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                     {listing.details.league} Division
                   </span>
                 </div>
-                <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {listing.status === "AVAILABLE" ? "Akun Ready" : "Terjual"}
+                <span className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 ${
+                  listing.status === "AVAILABLE"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-slate-100 text-slate-600 border-slate-200"
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${listing.status === "AVAILABLE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  {listingStatusLabel}
                 </span>
               </div>
 
@@ -156,15 +174,6 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {/* Diskusi & Tanya Jawab Akun (Bisa dibawa langsung ke Room Chat Rekber) */}
-            <ListingDiscussion
-              listingId={listing.id}
-              listingTitle={listing.title}
-              sellerName={listing.seller.username}
-              transactionId={transactionId}
-              onOpenChatRoom={() => setIsChatOpen(true)}
-            />
-
             {/* Customer Reviews Section */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs">
               <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center gap-2">
@@ -208,32 +217,8 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
 
               {/* Action Button: Beli Sekarang */}
               <div className="mb-3">
-                <BuyPanel listingId={listing.id} />
+                <BuyPanel listingId={listing.id} listingStatus={listing.status} />
               </div>
-
-              {/* Action Button: Room Chat Rekber (3 Arah Real-time) */}
-              <div className="mb-3">
-                <ListingChatLauncher
-                  transactionId={transactionId}
-                  listingTitle={listing.title}
-                  sellerName={listing.seller.username}
-                  isOpen={isChatOpen}
-                  onOpenChange={setIsChatOpen}
-                />
-              </div>
-
-              {/* Chat Seller */}
-              <a
-                href={waLink(listing.seller.whatsapp ?? "")}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full block"
-              >
-                <button className="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                  <MessageCircle size={15} className="text-emerald-600" />
-                  Tanya Penjual (WhatsApp)
-                </button>
-              </a>
 
               {/* Seller Profile Summary */}
               <div className="mt-6 pt-5 border-t border-slate-100">
@@ -286,7 +271,7 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
           </span>
         </div>
         <div className="w-48">
-          <BuyPanel listingId={listing.id} />
+          <BuyPanel listingId={listing.id} listingStatus={listing.status} />
         </div>
       </div>
     </div>

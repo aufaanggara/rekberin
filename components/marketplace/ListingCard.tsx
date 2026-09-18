@@ -8,6 +8,14 @@ import { toast } from "sonner";
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const [isSaved, setIsSaved] = useState(false);
+  const statusLabel =
+    listing.status === "AVAILABLE"
+      ? "Ready"
+      : listing.status === "IN_TRANSACTION"
+        ? "Diproses"
+        : listing.status === "SOLD"
+          ? "Terjual"
+          : "Nonaktif";
 
   // Fallback image just in case
   const imageSrc =
@@ -142,7 +150,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
                   : "bg-slate-100 text-slate-500 border border-slate-200"
               }`}
             >
-              {listing.status === "AVAILABLE" ? "Ready" : "Terjual"}
+              {statusLabel}
             </span>
           </div>
         </div>

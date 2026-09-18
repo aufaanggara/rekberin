@@ -16,8 +16,12 @@ import {
   Eye,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
-import { useStore } from "@/store/useStore";
-import type { Listing } from "@/types";
+import type { CreateListingRequest } from "@/types/listing-api";
+import { parseListingDetailResponse } from "@/lib/listing-api-client";
+import {
+  getApiErrorMessage,
+  readJsonResponse,
+} from "@/lib/transaction-api-client";
 import { toast } from "sonner";
 
 const gameOptions = [
@@ -40,7 +44,6 @@ const sampleScreenshots = [
 
 export function CreateListingForm() {
   const router = useRouter();
-  const { addListing } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
@@ -118,7 +121,7 @@ export function CreateListingForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !price) {
       toast.error("Judul dan harga wajib diisi!");
@@ -127,19 +130,7 @@ export function CreateListingForm() {
 
     setLoading(true);
 
-    const newId = `lst_${Date.now()}`;
-    const newListing: Listing = {
-      id: newId,
-      seller: {
-        id: "u_seller_me",
-        username: "efootball_seller1",
-        fullName: "Rian Pratama",
-        role: "USER",
-        isVerified: true,
-        rating: 4.9,
-        totalTransactions: 43,
-        whatsapp: "6281234567890",
-      },
+    const request: CreateListingRequest = {
       title,
       game,
       price: Number(price),
@@ -158,19 +149,37 @@ export function CreateListingForm() {
         notes,
       },
       images: images.length > 0 ? images : ["/screenshots/efootball_89.jpg"],
-      status: "AVAILABLE",
-      isFeatured: false,
-      viewCount: 1,
-      createdAt: new Date().toISOString().split("T")[0],
     };
 
-    addListing(newListing);
+    try {
+      const response = await fetch("/api/listings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      const payload = await readJsonResponse(response);
 
-    setTimeout(() => {
-      setLoading(false);
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error("Silakan login sebelum membuat listing.");
+          router.push(`/login?callbackUrl=${encodeURIComponent("/listings/new")}`);
+          return;
+        }
+        throw new Error(getApiErrorMessage(payload, "Listing tidak dapat dibuat."));
+      }
+
+      const result = parseListingDetailResponse(payload);
       toast.success("Iklan akun berhasil diterbitkan ke katalog!");
-      router.push(`/listings/${newId}`);
-    }, 600);
+      router.push(`/listings/${result.listing.id}`);
+    } catch (requestError) {
+      toast.error(
+        requestError instanceof Error
+          ? requestError.message
+          : "Listing tidak dapat dibuat."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const coverImage = images[0] || "/screenshots/efootball_89.jpg";

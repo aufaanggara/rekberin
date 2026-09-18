@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useStore } from "@/store/useStore";
+import { useListings } from "@/hooks/useListings";
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import {
   Search,
@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { Slider } from "@/components/ui/Slider";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -39,7 +40,7 @@ const SORT_OPTIONS = [
 ];
 
 export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: string }) {
-  const { listings } = useStore();
+  const { data: listings, isLoading, error, refetch } = useListings();
 
   // State
   const [search, setSearch] = useState(initialSearch);
@@ -142,6 +143,7 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
     minRating,
     statusFilter,
     sortBy,
+    listings,
   ]);
 
   // Reset helper
@@ -531,7 +533,33 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
           )}
 
           {/* Listings Cards Grid */}
-          {filteredListings.length > 0 ? (
+          {isLoading ? (
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <div
+                  key={item}
+                  className="h-96 rounded-2xl border border-slate-200 bg-white animate-pulse"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="bg-white rounded-2xl border border-red-200 p-8 text-center shadow-xs" role="alert">
+              <AlertCircle size={28} className="mx-auto text-red-500 mb-3" aria-hidden="true" />
+              <h3 className="font-bold text-slate-900">Katalog tidak dapat dimuat</h3>
+              <p className="mt-1 text-sm text-slate-500">{error}</p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                <RefreshCw size={15} aria-hidden="true" /> Coba lagi
+              </button>
+            </div>
+          ) : filteredListings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
               {filteredListings.map((l) => (
                 <ListingCard key={l.id} listing={l} />

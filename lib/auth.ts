@@ -4,7 +4,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseAuthClient } from "@/lib/supabase";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -20,15 +20,18 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = credentials.email.trim().toLowerCase();
+        const supabase = createSupabaseAuthClient();
+
         // Auth aktual didelegasikan ke Supabase Auth.
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
+          email,
           password: credentials.password,
         });
         if (error || !data.user) return null;
 
         const dbUser = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
         });
         if (!dbUser) return null;
 
@@ -43,11 +46,18 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      if (user) {
+        token.role = (user as any).role;
+        // Keep the database user id available to protected API routes.
+        (token as any).userId = user.id;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role;
+      if (session.user) {
+        (session.user as any).id = (token as any).userId ?? token.sub;
+        (session.user as any).role = token.role;
+      }
       return session;
     },
   },
