@@ -1074,3 +1074,33 @@ DEV-12 is assigned to Afiq and has been implemented on branch `feat/dev-12-ci-cd
 - The context update was originally committed as `81b6e0e docs: add AI project context` and is being consolidated into this canonical file during conflict resolution.
 
 The pull request must be reviewed and merged into `main` after this conflict-resolution commit. Do not commit `.env` or `.env.local`; use `.env.example` for documented environment variables.
+
+```yaml
+DEV-01_vercel_prerender_fix_2026-09-19:
+  trigger:
+    branch: ibrahim/transaction-flow
+    commit_with_failure: cf46351
+    failed_routes: [/login, /admin/transactions, /user/transactions]
+    error: ERR_INVALID_URL_input_empty_string
+  root_cause:
+    module: next-auth/react
+    phase: static_prerender_module_initialization
+    condition: NEXTAUTH_URL_exists_as_empty_string
+    behavior: next-auth_nullish_fallback_does_not_treat_empty_string_as_missing
+  implementation:
+    file: next.config.mjs
+    normalized_env: NEXTAUTH_URL
+    precedence: [NEXTAUTH_URL, VERCEL_PROJECT_PRODUCTION_URL, VERCEL_URL, http://localhost:3000]
+    hostname_without_scheme_policy: prefix_https
+    public_secret_exposure_added: false
+  regression_verification:
+    command: npm.cmd run build
+    injected_environment:
+      NEXTAUTH_URL: empty
+      VERCEL_URL: rekberin-preview.vercel.app
+      NEXT_PUBLIC_SUPABASE_URL: empty
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: empty
+    result: pass
+    static_pages_generated: 17_of_17
+    affected_routes_prerendered: pass
+```

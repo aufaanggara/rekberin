@@ -62,6 +62,13 @@ Status: selesai dan diverifikasi pada branch `ibrahim/transaction-flow`.
 - `npm run build`: lulus.
 - `git diff --check`: lulus; hanya warning line-ending Git pada working tree Windows.
 
+## Deployment Vercel
+
+- `next.config.mjs` menormalkan `NEXTAUTH_URL` sebelum `next-auth/react` dimuat.
+- Urutan fallback URL: `NEXTAUTH_URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `VERCEL_URL`, lalu localhost untuk development.
+- Nilai environment kosong dan hostname Vercel tanpa protokol ditangani sebagai URL valid.
+- Build regresi dengan `NEXTAUTH_URL` serta environment publik Supabase kosong dan `VERCEL_URL` preview: lulus, termasuk prerender `/login`, `/admin/transactions`, dan `/user/transactions`.
+
 ## Dampak ke issue dependensi
 
 - DEV-06 belum dinyatakan selesai: login/session yang dibutuhkan DEV-01 aktif, tetapi register/logout dan seluruh proteksi route bukan bagian commit ini.
