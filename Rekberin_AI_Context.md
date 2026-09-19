@@ -11,12 +11,12 @@ project_type: web_platform
 domain: escrow_marketplace_for_eFootball_account_trading
 language: Indonesian
 phase: Phase 1 / MVP
-repository: https://github.com/aufaanggara/jb/
+repository: https://github.com/aufaanggara/rekberin
 development_duration: 14 calendar days
 testing_duration: 7 calendar days
 assignment_rule: exactly_one_assignee_per_issue
 team_model: 4 fullstack developers
-current_plan_status: planned; requires team approval before implementation changes
+current_plan_status: implementation_in_progress; DEV-01 completed_on_feature_branch; remaining_issues_follow_backlog
 ```
 
 ## AI_OPERATING_RULES
@@ -317,6 +317,9 @@ Rules: one issue = one assignee; tasks should be actionable; DoD should be verif
 
 ```yaml
 type: development
+status: completed_on_branch
+implementation_branch: ibrahim/transaction-flow
+verified_date: 2026-09-19
 assignee: Ibrahim
 estimate_days: 3
 depends_on: [DEV-05, DEV-06, DEV-07]
@@ -832,6 +835,221 @@ Rekberin_Rencana_Issue.pdf: detailed issue descriptions; current allocation is r
 
 ## REPOSITORY_IMPLEMENTATION_PROGRESS
 
+### DEV-01 - TRANSACTION_FLOW
+
+```yaml
+issue_id: DEV-01
+status: completed_on_branch
+branch: ibrahim/transaction-flow
+verified_date: 2026-09-19
+schema_change: false
+migration_change: false
+initial_transaction_status: PENDING_PAYMENT
+listing_status_on_start: IN_TRANSACTION
+transaction_create_atomic: true
+listing_claim_strategy: prisma_transaction_plus_conditional_updateMany
+single_winner_concurrency_verified: true
+request_admin_id_semantics: User.id
+fee_policy_change: false
+advanced_transaction_actions: read_only_not_implemented
+```
+
+```yaml
+api_contracts:
+  GET /api/listings:
+    auth: public
+    result: database_listing_list
+  POST /api/listings:
+    auth: USER_session
+    seller_source: session_user_id
+    result: persisted_AVAILABLE_listing
+  GET /api/listings/[id]:
+    auth: public
+    result: database_listing_detail_or_404
+  GET /api/admins:
+    auth: public_selection_data
+    filter: role_in_ADMIN_SUPER_ADMIN_and_active_profile
+  POST /api/transactions:
+    auth: USER_session_only
+    request: listingId_plus_adminId_as_User.id
+    guards: [listing_exists, listing_AVAILABLE, buyer_not_seller, admin_role_allowed, admin_profile_active]
+    success: transaction_201_plus_listing_IN_TRANSACTION
+  GET /api/transactions:
+    auth: required
+    filter: buyerId_or_sellerId_or_adminId_equals_session_user
+  GET /api/transactions/[id]:
+    auth: required
+    participant_access: buyer_or_seller_or_assigned_admin
+    nonparticipant_response: 404
+```
+
+```yaml
+implementation_modules:
+  transaction_service: lib/transactions.ts
+  transaction_dto_types: types/transaction-api.ts
+  transaction_client_validation: lib/transaction-api-client.ts
+  transaction_view_mapping: lib/transaction-view-model.ts
+  transaction_hooks: hooks/useTransactions.ts
+  transaction_routes:
+    - app/api/transactions/route.ts
+    - app/api/transactions/[id]/route.ts
+  admin_selection_route: app/api/admins/route.ts
+  listing_service: lib/listings.ts
+  listing_dto_types: types/listing-api.ts
+  listing_client_validation: lib/listing-api-client.ts
+  listing_hooks: hooks/useListings.ts
+  listing_routes:
+    - app/api/listings/route.ts
+    - app/api/listings/[id]/route.ts
+  auth_integration:
+    - lib/auth.ts
+    - lib/supabase.ts
+    - app/(auth)/login/page.tsx
+  participant_pages:
+    - app/(dashboard)/user/transactions/page.tsx
+    - app/(dashboard)/user/transactions/[id]/page.tsx
+    - app/(dashboard)/admin/transactions/page.tsx
+    - app/(dashboard)/admin/transactions/[id]/page.tsx
+  marketplace_pages:
+    - components/marketplace/ListingsExplorer.tsx
+    - app/(marketplace)/listings/[id]/page.tsx
+    - app/(marketplace)/listings/[id]/BuyPanel.tsx
+    - components/marketplace/CreateListingForm.tsx
+```
+
+```yaml
+DEV-01_changed_files:
+  api:
+    - app/api/admins/route.ts
+    - app/api/listings/route.ts
+    - app/api/listings/[id]/route.ts
+    - app/api/transactions/route.ts
+    - app/api/transactions/[id]/route.ts
+  auth:
+    - app/(auth)/login/page.tsx
+    - lib/auth.ts
+    - lib/supabase.ts
+  user_transaction_UI:
+    - app/(dashboard)/user/transactions/page.tsx
+    - app/(dashboard)/user/transactions/[id]/page.tsx
+    - components/dashboard/BuyerTransactionView.tsx
+    - components/dashboard/SellerTransactionView.tsx
+  admin_transaction_UI:
+    - app/(dashboard)/admin/transactions/page.tsx
+    - app/(dashboard)/admin/transactions/[id]/page.tsx
+    - components/dashboard/AdminTransactionView.tsx
+  marketplace_UI:
+    - app/(marketplace)/listings/[id]/BuyPanel.tsx
+    - app/(marketplace)/listings/[id]/page.tsx
+    - components/marketplace/CreateListingForm.tsx
+    - components/marketplace/ListingCard.tsx
+    - components/marketplace/ListingsExplorer.tsx
+  hooks:
+    - hooks/useListings.ts
+    - hooks/useTransactions.ts
+  services_and_mapping:
+    - lib/listing-api-client.ts
+    - lib/listings.ts
+    - lib/transaction-api-client.ts
+    - lib/transaction-view-model.ts
+    - lib/transactions.ts
+  types:
+    - types/listing-api.ts
+    - types/transaction-api.ts
+    - types/transaction-view-model.ts
+  tests_and_tooling:
+    - scripts/seed-test-auth.ts
+    - tests/transaction-flow.test.ts
+    - tests/transaction-database.integration.test.ts
+    - tests/transaction-http.e2e.ts
+    - package.json
+  documentation:
+    - transaction-flow-temp.md
+    - Rekberin_AI_Context.md
+```
+
+```yaml
+auth_runtime_for_DEV_01:
+  nextauth_strategy: jwt
+  credentials_verifier: isolated_Supabase_Auth_client
+  application_identity_lookup: Prisma_User_by_normalized_email
+  jwt_fields: [userId, role]
+  session_fields: [user.id, user.role]
+  test_identity_check_command: npm run auth:check
+  test_identity_sync_command: npm run auth:seed
+  test_identity_password_documented_here: false
+```
+
+```yaml
+DEV-01_external_test_state:
+  Supabase_Auth_and_Prisma_test_identities:
+    buyer@test.com: USER
+    seller@test.com: USER
+    admin@rekberin.com: ADMIN
+    superadmin@rekberin.com: SUPER_ADMIN_nonparticipant_fixture
+  synchronization_status: ready
+  synchronization_command: npm run auth:seed
+  credential_value_recorded_in_context: false
+  persistent_transaction_or_listing_fixture_created: false
+```
+
+```yaml
+verification:
+  unit:
+    command: npm test
+    result: pass_6_of_6
+    coverage: [DTO_validation, public_admin_profile_contract, timeline, start_policy, participant_policy, listing_claim_helper]
+  database_integration:
+    command: npm run test:integration
+    result: pass_2_of_2
+    database: configured_Supabase_PostgreSQL
+    coverage: [relation_persistence, initial_statuses, DTO_roundtrip, concurrent_single_winner]
+    fixture_cleanup: automatic
+  http_e2e:
+    command: npm run test:e2e
+    result: pass
+    coverage: [NextAuth_Supabase_login, seller_listing_create, buyer_transaction_create, transaction_reopen, listing_status_update, buyer_seller_admin_read, nonparticipant_404]
+    fixture_cleanup: automatic
+  typecheck:
+    command: npm run typecheck
+    result: pass
+  production_build:
+    command: npm run build
+    result: pass
+  diff_check:
+    command: git diff --check
+    result: pass_with_Windows_line_ending_warnings_only
+```
+
+```yaml
+dependency_bridge_status:
+  DEV-06:
+    provided: [login, session_user_id, session_role, transaction_API_auth]
+    not_claimed_complete: [registration, logout, exhaustive_route_protection]
+  DEV-07:
+    provided: [listing_create, listing_list, listing_detail, seller_from_session]
+    not_claimed_complete: [listing_edit, listing_deactivate, ownership_update_API]
+  DEV-08:
+    provided: [marketplace_database_list, database_listing_detail, transaction_admin_selector]
+    not_claimed_complete: [full_admin_directory_page_audit]
+  DEV-13_DEV-14_DEV-15:
+    provided: [participant_transaction_list, participant_transaction_detail, assigned_admin_transaction_views]
+    not_claimed_complete: [dashboard_statistics, seller_listing_management, admin_status_mutations]
+```
+
+```yaml
+DEV-01_scope_exclusions_preserved:
+  - QRIS
+  - payment_proof
+  - payment_status_mutation
+  - account_handover
+  - credential_vault
+  - dispute
+  - transaction_chat
+  - transaction_notifications
+  - post_initial_status_transition_endpoints
+```
+
 ### DEV-05 — Menyiapkan Database
 
 ```yaml
@@ -871,6 +1089,38 @@ commits:
 - Local typecheck dan production build passed.
 - PR #21 dan #25 sudah di-merge ke `main`.
 - File `Rekberin_AI_Context.md` di-consolidate saat conflict resolution.
+
+The pull request must be reviewed and merged into `main` after this conflict-resolution commit. Do not commit `.env` or `.env.local`; use `.env.example` for documented environment variables.
+
+```yaml
+DEV-01_vercel_prerender_fix_2026-09-19:
+  trigger:
+    branch: ibrahim/transaction-flow
+    commit_with_failure: cf46351
+    failed_routes: [/login, /admin/transactions, /user/transactions]
+    error: ERR_INVALID_URL_input_empty_string
+  root_cause:
+    module: next-auth/react
+    phase: static_prerender_module_initialization
+    condition: NEXTAUTH_URL_exists_as_empty_string
+    behavior: next-auth_nullish_fallback_does_not_treat_empty_string_as_missing
+  implementation:
+    file: next.config.mjs
+    normalized_env: NEXTAUTH_URL
+    precedence: [NEXTAUTH_URL, VERCEL_PROJECT_PRODUCTION_URL, VERCEL_URL, http://localhost:3000]
+    hostname_without_scheme_policy: prefix_https
+    public_secret_exposure_added: false
+  regression_verification:
+    command: npm.cmd run build
+    injected_environment:
+      NEXTAUTH_URL: empty
+      VERCEL_URL: rekberin-preview.vercel.app
+      NEXT_PUBLIC_SUPABASE_URL: empty
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: empty
+    result: pass
+    static_pages_generated: 17_of_17
+    affected_routes_prerendered: pass
+```
 
 ---
 

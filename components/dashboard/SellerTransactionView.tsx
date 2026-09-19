@@ -1,21 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, User, Wallet, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
-import { TransactionChat } from "@/components/dashboard/TransactionChat";
-import { AccountVaultPanel } from "@/components/dashboard/AccountVaultPanel";
 import { Avatar } from "@/components/ui/Avatar";
-import { useStore } from "@/store/useStore";
 import { formatRupiah } from "@/lib/utils";
-import type { Transaction } from "@/types";
+import type { TransactionViewModel } from "@/types/transaction-view-model";
 
-export function SellerTransactionView({ initialTransaction }: { initialTransaction: Transaction }) {
-  const { getTransaction } = useStore();
-  const tx = getTransaction(initialTransaction.id) || initialTransaction;
+export function SellerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
+  const tx = initialTransaction;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col lg:flex-row gap-8">
@@ -58,7 +54,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                 </div>
                 <div className="flex justify-between">
                   <span className="text-txt-muted">Potongan Rekber</span>
-                  <span className="font-medium text-emerald-600">Rp 0 (Ditanggung Pembeli)</span>
+                    <span className="font-medium text-emerald-600">Mengikuti data transaksi</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-emerald-600 border-t border-slate-100 pt-2">
                   <span>Dana yang Diterima</span>
@@ -71,7 +67,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                 <div>
                   <p className="font-bold">Syarat Pencairan Dana</p>
                   <p className="text-[11px] text-amber-800 mt-0.5">
-                    Dana akan otomatis ditransfer ke rekening Anda setelah pembeli mengonfirmasi akun berhasil diamankan.
+                    Mekanisme pencairan belum tersedia pada tahap ini. Halaman hanya menampilkan status dari API.
                   </p>
                 </div>
               </div>
@@ -134,7 +130,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                   <div>
                     <p className="font-semibold text-slate-900">{tx.admin.user.username}</p>
                     <p className="text-xs text-amber-700">
-                      Waktu aktif: {tx.admin.activeHours}
+                      Waktu aktif: {tx.admin.activeHours ?? "Belum tersedia"}
                     </p>
                   </div>
                 </div>
@@ -143,25 +139,16 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
           </Card>
         </div>
 
-        {/* Section Brankas Data Akun (Vault) */}
-        <div>
-          <AccountVaultPanel
-            transactionId={tx.id}
-            role="SELLER"
-          />
-        </div>
-
-        {/* Section Room Chat 3 Arah */}
-        <div>
-          <TransactionChat
-            transactionId={tx.id}
-            defaultRole="SELLER"
-            defaultUserName={tx.listing.seller.username}
-            buyerName={tx.buyer.username}
-            sellerName={tx.listing.seller.username}
-            adminName={tx.admin.user.username}
-          />
-        </div>
+        <Card>
+          <h3 className="font-semibold text-sm sm:text-base">Fitur transaksi lanjutan</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500">
+            Handover akun, brankas akun, dispute, dan chat belum tersedia pada tahap ini.
+            Jangan memasukkan kredensial akun pada halaman ini.
+          </p>
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs font-semibold text-slate-500" aria-disabled="true">
+            Belum tersedia — menunggu tahap implementasi berikutnya
+          </div>
+        </Card>
       </div>
     </div>
   );

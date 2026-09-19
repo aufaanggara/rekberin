@@ -8,7 +8,13 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --import tsx --test tests/transaction-flow.test.ts",
+    "test:integration": "node --import tsx --test tests/transaction-database.integration.test.ts",
+    "test:e2e": "tsx tests/transaction-http.e2e.ts",
     "typecheck": "tsc --noEmit",
+    "scrape:pesdb": "node --use-system-ca --import tsx scripts/scrape-pesdb.ts",
+    "auth:check": "tsx scripts/seed-test-auth.ts",
+    "auth:seed": "tsx scripts/seed-test-auth.ts --apply",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts"

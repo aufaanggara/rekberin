@@ -10,6 +10,17 @@ const supabaseAnonKey =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/** Isolated client for server-side credential verification in NextAuth. */
+export function createSupabaseAuthClient() {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
 // Service-role client — HANYA dipakai di server (route handlers/server actions),
 // jangan pernah di-import di client component.
 export function createSupabaseServiceClient() {

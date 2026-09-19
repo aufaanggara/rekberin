@@ -1,27 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, User, CheckCircle2, Lock, CreditCard, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ShieldCheck, CheckCircle2, Lock, AlertTriangle } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
-import { TransactionChat } from "@/components/dashboard/TransactionChat";
-import { AccountVaultPanel } from "@/components/dashboard/AccountVaultPanel";
-import { PaymentModal } from "@/components/dashboard/PaymentModal";
-import { DisputeModal } from "@/components/dashboard/DisputeModal";
 import { Avatar } from "@/components/ui/Avatar";
-import { useStore } from "@/store/useStore";
 import { formatRupiah } from "@/lib/utils";
-import type { Transaction } from "@/types";
+import type { TransactionViewModel } from "@/types/transaction-view-model";
 
-export function BuyerTransactionView({ initialTransaction }: { initialTransaction: Transaction }) {
-  const { getTransaction } = useStore();
-  const tx = getTransaction(initialTransaction.id) || initialTransaction;
-
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [disputeOpen, setDisputeOpen] = useState(false);
+export function BuyerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
+  const tx = initialTransaction;
 
   const totalPayment = tx.price + tx.platformFee + tx.adminFee;
   const isPendingPayment = tx.status === "PENDING_PAYMENT";
@@ -49,26 +39,20 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
           </div>
         </div>
 
-        {/* Action Alert Banner for Pending Payment */}
+        {/* Payment is intentionally read-only until the payment scope is implemented. */}
         {isPendingPayment && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3" role="status">
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500 text-white rounded-xl">
-                <CreditCard size={20} />
+              <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0">
+                <AlertTriangle size={20} />
               </div>
               <div>
                 <h4 className="font-bold text-amber-950 text-sm">Menunggu Pembayaran</h4>
                 <p className="text-xs text-amber-800 mt-0.5">
-                  Selesaikan transfer sebesar <strong>{formatRupiah(totalPayment)}</strong> agar data akun segera diserahkan penjual.
+                  Total transaksi <strong>{formatRupiah(totalPayment)}</strong>. Integrasi pembayaran belum tersedia pada tahap ini, sehingga halaman hanya menampilkan status dari API.
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setPaymentOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer whitespace-nowrap"
-            >
-              Bayar Sekarang (QRIS / VA)
-            </button>
           </div>
         )}
 
@@ -102,25 +86,15 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
                 </div>
               </div>
 
-              {isPendingPayment ? (
-                <button
-                  type="button"
-                  onClick={() => setPaymentOpen(true)}
-                  className="w-full mt-3 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer"
-                >
-                  Bayar Sekarang
-                </button>
-              ) : (
-                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 text-xs text-emerald-800 flex items-start gap-2 mt-4">
-                  <ShieldCheck size={16} className="text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold">Dana Terlindungi di Escrow</p>
-                    <p className="text-[11px] text-emerald-700 mt-0.5">
-                      Uang Anda aman di rekening admin rekber sampai Anda mengonfirmasi akun aman.
-                    </p>
-                  </div>
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-600 flex items-start gap-2 mt-4" role="status">
+                <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-slate-700">Status transaksi bersifat read-only</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Pembayaran, escrow, dan perubahan status belum memiliki aksi pada tahap ini.
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </Card>
 
@@ -161,7 +135,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
                   <div>
                     <p className="font-semibold text-slate-900">{tx.listing.seller.username}</p>
                     <p className="text-xs text-txt-muted">
-                      Rating: {tx.listing.seller.rating || 4.8}★ · {tx.listing.seller.totalTransactions || 10}+ Terjual
+                      Rating: {tx.listing.seller.rating ?? "Belum tersedia"} · {tx.listing.seller.totalTransactions ?? "—"} Terjual
                     </p>
                   </div>
                 </div>
@@ -182,7 +156,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
                   <div>
                     <p className="font-semibold text-slate-900">{tx.admin.user.username}</p>
                     <p className="text-xs text-amber-700">
-                      Trust Score: {tx.admin.trustScore}% · {tx.admin.totalSuccess} Sukses
+                      Trust Score: {tx.admin.trustScore !== null ? `${tx.admin.trustScore}%` : "Belum tersedia"} · {tx.admin.totalSuccess ?? "—"} Sukses
                     </p>
                   </div>
                 </div>
@@ -190,54 +164,27 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
 
               <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
                 <div className="flex items-center gap-1.5 font-semibold text-slate-700 mb-1">
-                  <Lock size={12} className="text-blue-600" /> Jaminan Refund
+                  <Lock size={12} className="text-blue-600" /> Perlindungan Transaksi
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Jika spesifikasi akun tidak cocok, Anda dapat mengajukan komplain refund 100%.
+                  Detail perlindungan dan refund belum memiliki aksi pada tahap ini; status transaksi tetap mengikuti data API.
                 </p>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Section Brankas Data Akun (Vault) */}
-        <div>
-          <AccountVaultPanel
-            transactionId={tx.id}
-            role="BUYER"
-            onOpenDispute={() => setDisputeOpen(true)}
-          />
-        </div>
-
-        {/* Section Room Chat 3 Arah */}
-        <div>
-          <TransactionChat
-            transactionId={tx.id}
-            defaultRole="BUYER"
-            defaultUserName={tx.buyer.username}
-            buyerName={tx.buyer.username}
-            sellerName={tx.listing.seller.username}
-            adminName={tx.admin.user.username}
-          />
-        </div>
+        <Card>
+          <h3 className="font-semibold text-sm sm:text-base">Fitur transaksi lanjutan</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500">
+            Pembayaran, handover, dispute, brankas akun, dan chat belum tersedia pada tahap ini.
+            Tidak ada aksi atau data sensitif yang dapat dikirim dari halaman transaksi.
+          </p>
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs font-semibold text-slate-500" aria-disabled="true">
+            Belum tersedia — menunggu tahap implementasi berikutnya
+          </div>
+        </Card>
       </div>
-
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        transactionId={tx.id}
-        amount={totalPayment}
-        listingTitle={tx.listing.title}
-      />
-
-      {/* Dispute Modal */}
-      <DisputeModal
-        isOpen={disputeOpen}
-        onClose={() => setDisputeOpen(false)}
-        transactionId={tx.id}
-        isAdmin={false}
-      />
     </div>
   );
 }
