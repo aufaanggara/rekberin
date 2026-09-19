@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   Receipt,
@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +32,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   isHighlight?: boolean;
+  badge?: string;
 }
 
 const roleConfig = {
@@ -50,6 +52,8 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
@@ -70,9 +74,11 @@ const roleConfig = {
       { id: "n4", title: "Penarikan Dana Berhasil", desc: "Pencairan saldo Rp 1.500.000 ke BCA telah berhasil.", time: "1 hari lalu", unread: false },
     ],
     items: [
-      { href: "/user?tab=seller", label: "Overview", icon: LayoutDashboard },
-      { href: "/user/transactions", label: "Transaksi Penjualan", icon: Receipt },
-      { href: "/user?tab=seller", label: "Kelola Listing", icon: Package },
+      { href: "/user?tab=seller", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
+      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
@@ -112,6 +118,8 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
@@ -119,8 +127,89 @@ const roleConfig = {
   },
 };
 
-export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" | "user" }) {
+// Inner nav component that reads searchParams (needs Suspense)
+function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" | "user"; currentRole: (typeof roleConfig)[keyof typeof roleConfig] }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentView = searchParams?.get("view");
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-2 pb-1.5">
+        Menu {currentRole.title}
+      </p>
+      <nav className="flex flex-col gap-1">
+        {currentRole.items.map((item) => {
+          const isChat = item.href.includes("view=chat");
+          const isOrders = item.href.includes("view=orders");
+          const isTransactions = item.href.startsWith("/user/transactions");
+          const isDashboard = item.href === "/user" || item.href === "/user?tab=seller";
+
+          let active = false;
+          if (isChat) {
+            active = pathname === "/user" && currentView === "chat";
+          } else if (isOrders) {
+            active = pathname === "/user" && currentView === "orders";
+          } else if (isTransactions) {
+            active = pathname.startsWith("/user/transactions");
+          } else if (isDashboard) {
+            active = pathname === "/user" && !currentView;
+          } else {
+            active =
+              pathname === item.href ||
+              (!["/admin", "/user"].includes(item.href) &&
+                pathname.startsWith(item.href));
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all",
+                active
+                  ? role === "seller"
+                    ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/80 shadow-xs"
+                    : role === "admin"
+                      ? "bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-xs"
+                      : "bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-xs"
+                  : item.isHighlight
+                    ? "bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100/70 border border-dashed border-emerald-300"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              )}
+            >
+              <item.icon
+                size={16}
+                className={cn(
+                  active
+                    ? role === "seller"
+                      ? "text-emerald-600"
+                      : role === "admin"
+                        ? "text-amber-600"
+                        : "text-blue-600"
+                    : "text-slate-400"
+                )}
+              />
+              <span className="flex-1">{item.label}</span>
+              {item.badge && (
+                <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                  {item.badge}
+                </span>
+              )}
+              {item.isHighlight && (
+                <span className="text-[9px] uppercase font-extrabold bg-emerald-600 text-white px-1.5 py-0.5 rounded-full">
+                  Baru
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" | "user" }) {
   const currentRole = roleConfig[role];
   const [notifOpen, setNotifOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -274,58 +363,17 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
         </div>
       </div>
 
-      {/* Role Navigation Menu */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-2 pb-1.5">
-          Menu {currentRole.title}
-        </p>
-        <nav className="flex flex-col gap-1">
-          {currentRole.items.map((item) => {
-            const active =
-              pathname === item.href ||
-              (!["/admin", "/user"].includes(item.href) &&
-                pathname.startsWith(item.href));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all",
-                  active
-                    ? role === "seller"
-                      ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/80 shadow-xs"
-                      : role === "admin"
-                      ? "bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-xs"
-                      : "bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-xs"
-                    : item.isHighlight
-                    ? "bg-emerald-50/70 text-emerald-700 hover:bg-emerald-100/70 border border-dashed border-emerald-300"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                )}
-              >
-                <item.icon
-                  size={16}
-                  className={cn(
-                    active
-                      ? role === "seller"
-                        ? "text-emerald-600"
-                        : role === "admin"
-                        ? "text-amber-600"
-                        : "text-blue-600"
-                      : "text-slate-400"
-                  )}
-                />
-                <span className="flex-1">{item.label}</span>
-                {item.isHighlight && (
-                  <span className="text-[9px] uppercase font-extrabold bg-emerald-600 text-white px-1.5 py-0.5 rounded-full">
-                    Baru
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Role Navigation Menu — Suspense boundary for useSearchParams */}
+      <Suspense fallback={
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 animate-pulse">
+          <div className="h-3 bg-slate-100 rounded mb-3 w-24" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-9 bg-slate-50 rounded-xl" />)}
+          </div>
+        </div>
+      }>
+        <SidebarNav role={role} currentRole={currentRole} />
+      </Suspense>
 
       {/* Escrow Guarantee Box */}
       <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200 text-xs space-y-1.5">

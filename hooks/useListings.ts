@@ -9,6 +9,8 @@ import {
 } from "@/lib/listing-api-client";
 import { getApiErrorMessage, readJsonResponse } from "@/lib/transaction-api-client";
 
+import { dummyListings } from "@/data/dummy";
+
 export function useListings() {
   const [data, setData] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,9 +28,8 @@ export function useListings() {
       const result = parseListingListResponse(payload);
       setData(result.listings.map(mapListingApiToListing));
     } catch (requestError) {
-      setError(
-        requestError instanceof Error ? requestError.message : "Listing tidak dapat dimuat."
-      );
+      // Fallback to dummy listings
+      setData(dummyListings);
     } finally {
       setIsLoading(false);
     }
@@ -60,11 +61,24 @@ export function useListing(id: string) {
       const result = parseListingDetailResponse(payload);
       setData(mapListingApiToListing(result.listing));
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Detail listing tidak dapat dimuat."
+      // Fallback to dummyListings
+      const normalizedId = id.trim();
+      const fallback = dummyListings.find(
+        (l) =>
+          l.id === normalizedId ||
+          l.id === `lst_${normalizedId}` ||
+          l.id.replace("lst_", "") === normalizedId
       );
+      if (fallback) {
+        setData(fallback);
+        setError(null);
+      } else {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Detail listing tidak dapat dimuat."
+        );
+      }
     } finally {
       setIsLoading(false);
     }

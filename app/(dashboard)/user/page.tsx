@@ -43,6 +43,10 @@ import {
   Send,
   History,
   Flame,
+  Search,
+  ArrowLeft,
+  ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -71,10 +75,15 @@ interface Inquiry {
   listingId: string;
   transactionId?: string;
   listingTitle: string;
+  game?: string;
+  price?: number;
   buyerName: string;
+  buyerAvatar?: string;
   question: string;
   time: string;
   replied?: boolean;
+  replyText?: string;
+  replyTime?: string;
 }
 
 const initialWithdrawals: WithdrawalRecord[] = [
@@ -83,19 +92,109 @@ const initialWithdrawals: WithdrawalRecord[] = [
 ];
 
 const initialInquiries: Inquiry[] = [
-  { id: "inq_1", listingId: "1", transactionId: "trx_1", listingTitle: "Akun Diamond League 89 OVR Full Squad Legend", buyerName: "Dimas Anggara", question: "Halo gan, Konami ID nya apakah bisa langsung diganti ke email baru saya saat transaksi rekber?", time: "15 mnt lalu", replied: false },
-  { id: "inq_2", listingId: "2", transactionId: "trx_2", listingTitle: "Akun eFootball Divisi 1", buyerName: "Rizky_Gamer", question: "Ada Big Time Haaland atau Messi 2022 gan di akun ini?", time: "1 jam lalu", replied: true },
+  {
+    id: "inq_1",
+    listingId: "lst_1",
+    transactionId: "trx_1",
+    listingTitle: "Akun Diamond League 89 OVR Full Squad Legend",
+    game: "eFootball 2026",
+    price: 850000,
+    buyerName: "Dimas Anggara",
+    question: "Halo gan, Konami ID nya apakah bisa langsung diganti ke email baru saya saat transaksi rekber?",
+    time: "15 mnt lalu",
+    replied: false,
+  },
+  {
+    id: "inq_2",
+    listingId: "lst_2",
+    transactionId: "trx_2",
+    listingTitle: "Akun eFootball Divisi 1 Booster Epics",
+    game: "eFootball 2026",
+    price: 350000,
+    buyerName: "Rizky_Gamer",
+    question: "Ada Big Time Haaland atau Messi 2022 gan di akun ini?",
+    time: "1 jam lalu",
+    replied: true,
+    replyText: "Halo gan, ada Big Time Messi 2022 booster + BT Haaland max level. Silakan cek detail di postingan ya!",
+    replyTime: "45 mnt lalu",
+  },
+  {
+    id: "inq_3",
+    listingId: "lst_3",
+    transactionId: "trx_1",
+    listingTitle: "Akun MLBB Sultan 140+ Skin Collector & Legend",
+    game: "Mobile Legends",
+    price: 1250000,
+    buyerName: "Kevin_MLBB",
+    question: "Skin Collector Granger sama Legend Gusion ada gak gan? All unbind kan?",
+    time: "2 jam lalu",
+    replied: false,
+  },
+  {
+    id: "inq_4",
+    listingId: "lst_4",
+    transactionId: "trx_1",
+    listingTitle: "Akun Genshin Impact AR 58 C6 Furina + Sig",
+    game: "Genshin Impact",
+    price: 1750000,
+    buyerName: "Aditya_Store",
+    question: "Bisa nego tipis gak bang untuk akun Genshin AR 58 ini? Langsung gas checkout rekber malam ini.",
+    time: "3 jam lalu",
+    replied: false,
+  },
+  {
+    id: "inq_5",
+    listingId: "lst_2",
+    transactionId: "trx_2",
+    listingTitle: "Akun eFootball Divisi 1 Booster Epics",
+    game: "eFootball 2026",
+    price: 350000,
+    buyerName: "Fajar_Gans",
+    question: "Apakah akun ini pernah kena suspend atau warning dari developer sebelumnya?",
+    time: "5 jam lalu",
+    replied: true,
+    replyText: "Akun 100% aman dan bersih dari riwayat warning/suspend gan, bergaransi penuh dari Rekberin.",
+    replyTime: "4 jam lalu",
+  },
+  {
+    id: "inq_6",
+    listingId: "lst_1",
+    transactionId: "trx_1",
+    listingTitle: "Akun Free Fire Old Season 1 Elite Pass Sakura",
+    game: "Free Fire",
+    price: 920000,
+    buyerName: "Brandon99",
+    question: "Akun FF Old Season 1 ini bundle Sakura sama Hip Hop asli unbind FB atau VK?",
+    time: "1 hari lalu",
+    replied: true,
+    replyText: "Halo, login single bind Google Play, data bisa dipindah total ke email pribadi Anda ya.",
+    replyTime: "1 hari lalu",
+  },
+];
+
+const quickReplies = [
+  "Halo gan, akun masih ready & siap langsung diproses via Rekberin!",
+  "Data login bisa langsung dipindah ke email baru saat proses serah terima.",
+  "Akun 100% aman, all unbind, dan bergaransi resmi anti-hackback.",
+  "Bisa langsung gas checkout rekber resmi agar akun segera diamankan admin!",
 ];
 
 function UserDashboardContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ActiveTab>("buyer");
+  const [sellerView, setSellerView] = useState<"overview" | "chat" | "orders">("overview");
 
-  // Sync tab dari URL query param (?tab=seller)
+  // Sync tab & view dari URL query param (?tab=seller&view=chat)
   useEffect(() => {
     const tabParam = searchParams.get("tab");
+    const viewParam = searchParams.get("view");
     if (tabParam === "seller" || tabParam === "buyer") {
       setActiveTab(tabParam);
+    }
+    if (viewParam === "chat" || viewParam === "orders" || viewParam === "overview") {
+      setSellerView(viewParam);
+    } else if (!viewParam) {
+      setSellerView("overview");
     }
   }, [searchParams]);
 
@@ -120,6 +219,10 @@ function UserDashboardContent() {
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>(initialWithdrawals);
   const [inquiries, setInquiries] = useState<Inquiry[]>(initialInquiries);
   const [replyInput, setReplyInput] = useState<{ [id: string]: string }>({});
+  const [inquirySearch, setInquirySearch] = useState("");
+  const [inquiryFilter, setInquiryFilter] = useState<"ALL" | "UNREPLIED" | "REPLIED">("ALL");
+  const [selectedInquiryId, setSelectedInquiryId] = useState<string>("inq_1");
+  const [mobileInquiryView, setMobileInquiryView] = useState<"list" | "chat">("list");
 
   const initialMine = dummyListings.filter((l) => l.seller.username === "efootball_seller1");
   const [myListings, setMyListings] = useState(initialMine.map((l) => ({ ...l, isPaused: false })));
@@ -176,22 +279,50 @@ function UserDashboardContent() {
     setTimeout(() => { setWithdrawSuccess(false); setIsWithdrawModalOpen(false); }, 2000);
   };
   const { addChatMessage } = useStore();
-  const handleSendReply = (inqId: string) => {
-    const text = replyInput[inqId]?.trim();
+  const handleSendReply = (inqId: string, customText?: string) => {
+    const text = (customText || replyInput[inqId] || "").trim();
     if (!text) return;
     const targetInq = inquiries.find((i) => i.id === inqId);
     if (targetInq?.transactionId) {
       addChatMessage(targetInq.transactionId, "SELLER", "Rian Pratama", `[Dari Diskusi Listing]: ${text}`, undefined, undefined, true);
     }
-    setInquiries((prev) => prev.map((inq) => (inq.id === inqId ? { ...inq, replied: true } : inq)));
+    setInquiries((prev) =>
+      prev.map((inq) =>
+        inq.id === inqId
+          ? {
+              ...inq,
+              replied: true,
+              replyText: text,
+              replyTime: "Baru saja",
+            }
+          : inq
+      )
+    );
     setReplyInput((prev) => ({ ...prev, [inqId]: "" }));
   };
+
+  const filteredInquiries = inquiries.filter((inq) => {
+    if (inquiryFilter === "UNREPLIED" && inq.replied) return false;
+    if (inquiryFilter === "REPLIED" && !inq.replied) return false;
+    if (inquirySearch.trim()) {
+      const q = inquirySearch.toLowerCase();
+      const matchName = inq.buyerName.toLowerCase().includes(q);
+      const matchTitle = inq.listingTitle.toLowerCase().includes(q);
+      const matchQuestion = inq.question.toLowerCase().includes(q);
+      const matchGame = inq.game?.toLowerCase().includes(q);
+      return matchName || matchTitle || matchQuestion || matchGame;
+    }
+    return true;
+  });
+
+  const selectedInquiry = inquiries.find((i) => i.id === selectedInquiryId) || inquiries[0];
+  const unrepliedInquiriesCount = inquiries.filter((i) => !i.replied).length;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-8">
       <DashboardSidebar role="user" />
 
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 min-w-0 space-y-6">
 
         {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-1.5 flex items-center gap-1">
@@ -510,339 +641,624 @@ function UserDashboardContent() {
         {activeTab === "seller" && (
           <div className="space-y-6 animate-in fade-in duration-200">
 
-            {/* Kotakan Tarik Saldo */}
-            <div className="group relative overflow-hidden bg-white hover:bg-emerald-50/20 rounded-2xl border border-slate-200 hover:border-emerald-300 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                      <Wallet size={22} className="stroke-[2.2]" />
+            {/* VIEW 1: OVERVIEW & LISTINGS */}
+            {sellerView === "overview" && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Seller Balance Card — Compact & Sleek */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Wallet size={24} />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                           Saldo Hasil Penjualan
                         </span>
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Siap Ditarik
                         </span>
                       </div>
-                      <p className="text-2xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
+                      <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">Hasil penjualan akun game yang telah tuntas dan siap dicairkan ke rekening bank atau e-wallet.</p>
                     </div>
                   </div>
-                </div>
-                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                  Hasil penjualan akun game yang telah selesai masa rekber dan siap dicairkan langsung ke rekening bank atau e-wallet Anda.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => {
-                    setWithdrawContext("seller");
-                    setWithdrawAmountInput("2.450.000");
-                    setIsWithdrawModalOpen(true);
-                  }}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                >
-                  <ArrowUpRight size={15} />
-                  <span>Klik untuk Tarik Saldo</span>
-                </Button>
-                <button
-                  onClick={() => setShowWithdrawHistory(!showWithdrawHistory)}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 px-3 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <History size={14} />
-                  <span>{showWithdrawHistory ? "Tutup Log" : "Riwayat"}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Seller Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Dana di Escrow</p>
-                  <p className="text-xl sm:text-2xl font-black text-amber-600 mt-0.5">Rp 850.000</p>
-                  <span className="text-[11px] text-amber-600 font-medium mt-1 inline-block">Menunggu Konfirmasi</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><Clock size={22} /></div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Listing Aktif</p>
-                  <p className="text-2xl font-black text-slate-800 mt-0.5">{activeListings.length}</p>
-                  <span className="text-[11px] text-blue-600 font-medium mt-1 inline-block">Tayang di Marketplace</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center"><Package size={22} /></div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pertanyaan Masuk</p>
-                  <p className="text-2xl font-black text-slate-800 mt-0.5">{inquiries.filter(i => !i.replied).length}</p>
-                  <span className="text-[11px] text-purple-600 font-medium mt-1 inline-block">Butuh Dibalas</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center"><MessageCircle size={22} /></div>
-              </div>
-            </div>
-
-            {/* Withdrawal History */}
-            {showWithdrawHistory && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <History size={16} className="text-emerald-600" />
-                    <h3 className="font-bold text-slate-900 text-sm">Riwayat Penarikan Saldo</h3>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      onClick={() => {
+                        setWithdrawContext("seller");
+                        setWithdrawAmountInput("2.450.000");
+                        setIsWithdrawModalOpen(true);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <ArrowUpRight size={15} />
+                      <span>Tarik Saldo</span>
+                    </Button>
+                    <button
+                      onClick={() => setShowWithdrawHistory(!showWithdrawHistory)}
+                      className="text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5 cursor-pointer bg-white"
+                    >
+                      <History size={14} />
+                      <span>{showWithdrawHistory ? "Tutup Log" : "Riwayat"}</span>
+                    </button>
                   </div>
-                  <button onClick={() => setShowWithdrawHistory(false)} className="text-xs text-slate-400 hover:text-slate-600">Tutup</button>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider text-left bg-slate-50">
-                        <th className="py-2.5 px-3">ID Penarikan</th>
-                        <th className="py-2.5 px-3">Waktu</th>
-                        <th className="py-2.5 px-3">Tujuan Transfer</th>
-                        <th className="py-2.5 px-3">Nominal</th>
-                        <th className="py-2.5 px-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {withdrawals.map((w) => (
-                        <tr key={w.id} className="hover:bg-slate-50/70">
-                          <td className="py-3 px-3 font-mono font-bold text-slate-800">{w.id}</td>
-                          <td className="py-3 px-3 text-slate-500">{w.date}</td>
-                          <td className="py-3 px-3"><span className="font-bold text-slate-800">{w.bank}</span> <span className="text-slate-400">({w.accountNumber})</span></td>
-                          <td className="py-3 px-3 font-black text-slate-900">{formatRupiah(w.amount)}</td>
-                          <td className="py-3 px-3 text-right">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${w.status === "SUCCESS" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                              {w.status === "SUCCESS" ? "Berhasil" : "Sedang Diproses"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
 
-            {/* Inquiries */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <MessageCircle size={16} className="text-purple-600" />
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">Pertanyaan Calon Pembeli</h3>
-                </div>
-                <span className="text-xs text-slate-400 font-medium">Tanggapi cepat untuk menaikkan reputasi</span>
-              </div>
-              <div className="space-y-3">
-                {inquiries.map((inq) => (
-                  <div key={inq.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2.5">
+                {/* Withdrawal History */}
+                {showWithdrawHistory && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 animate-in fade-in duration-200">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-bold text-slate-900">{inq.buyerName}</span>
-                        <span className="text-slate-400">• {inq.time}</span>
-                      </div>
-                      <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded">{inq.listingTitle}</span>
-                    </div>
-                    <p className="text-xs text-slate-700 font-medium">{inq.question}</p>
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <div className="flex items-center gap-2">
-                        <Link href={`/listings/${inq.listingId}`} className="text-[11px] text-slate-500 hover:text-blue-600 inline-flex items-center gap-1 font-semibold">
-                          <Eye size={12} /> Lihat Postingan
-                        </Link>
-                        <span className="text-slate-300">•</span>
-                        <Link href={`/user/transactions/${inq.transactionId || "trx_1"}`} className="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
-                          <MessageSquare size={12} /> Lanjut di Room Chat Rekber →
-                        </Link>
+                        <History size={16} className="text-emerald-600" />
+                        <h3 className="font-bold text-slate-900 text-sm">Riwayat Penarikan Saldo</h3>
                       </div>
+                      <button onClick={() => setShowWithdrawHistory(false)} className="text-xs text-slate-400 hover:text-slate-600">Tutup</button>
                     </div>
-                    {inq.replied ? (
-                      <div className="text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 font-semibold">
-                        <CheckCircle2 size={13} /> Telah dijawab ke pembeli
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider text-left bg-slate-50">
+                            <th className="py-2.5 px-3">ID Penarikan</th>
+                            <th className="py-2.5 px-3">Waktu</th>
+                            <th className="py-2.5 px-3">Tujuan Transfer</th>
+                            <th className="py-2.5 px-3">Nominal</th>
+                            <th className="py-2.5 px-3 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {withdrawals.map((w) => (
+                            <tr key={w.id} className="hover:bg-slate-50/70">
+                              <td className="py-3 px-3 font-mono font-bold text-slate-800">{w.id}</td>
+                              <td className="py-3 px-3 text-slate-500">{w.date}</td>
+                              <td className="py-3 px-3"><span className="font-bold text-slate-800">{w.bank}</span> <span className="text-slate-400">({w.accountNumber})</span></td>
+                              <td className="py-3 px-3 font-black text-slate-900">{formatRupiah(w.amount)}</td>
+                              <td className="py-3 px-3 text-right">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${w.status === "SUCCESS" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                                  {w.status === "SUCCESS" ? "Berhasil" : "Sedang Diproses"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Listings Management */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900">Kelola Katalog Iklan Saya</h2>
+                      <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan iklan sementara.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
+                        {(["ALL", "AVAILABLE", "SOLD"] as const).map((f) => (
+                          <button key={f} onClick={() => setListingFilter(f)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
+                            {f === "ALL" && `Semua (${myListings.length})`}
+                            {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
+                            {f === "SOLD" && `Terjual (${soldListings.length})`}
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          type="text"
-                          placeholder="Ketik balasan cepat..."
-                          value={replyInput[inq.id] || ""}
-                          onChange={(e) => setReplyInput({ ...replyInput, [inq.id]: e.target.value })}
-                          className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-emerald-600"
-                        />
-                        <Button size="sm" onClick={() => handleSendReply(inq.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 h-auto font-bold">
-                          <Send size={12} className="mr-1" /> Balas
+                      <Link href="/listings/new">
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
+                          <PlusCircle size={13} className="mr-1" /> Iklan Baru
                         </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="p-4 sm:p-6">
+                    {filteredSellerListings.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 text-xs">Tidak ada iklan pada kategori ini.</div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredSellerListings.map((l) => {
+                          const imgSrc = l.images && l.images.length > 0 ? l.images[0] : "/screenshots/efootball_89.jpg";
+                          return (
+                            <div
+                              key={l.id}
+                              className={`group rounded-2xl border flex flex-col justify-between overflow-hidden transition-all duration-200 ${
+                                l.isPaused
+                                  ? "border-dashed border-slate-300 opacity-70 bg-slate-50"
+                                  : "border-slate-200 bg-white hover:border-emerald-400 hover:shadow-lg"
+                              }`}
+                            >
+                              {/* Photo */}
+                              <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={imgSrc}
+                                  alt={l.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+                                {/* Top Badges */}
+                                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+                                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-md uppercase tracking-wider">
+                                    {l.game}
+                                  </span>
+                                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md ${
+                                    l.isPaused
+                                      ? "bg-amber-500/90 text-white"
+                                      : l.status === "AVAILABLE"
+                                      ? "bg-emerald-500/90 text-white"
+                                      : "bg-slate-600/90 text-white"
+                                  }`}>
+                                    {l.isPaused ? "⏸ Dijeda" : l.status === "AVAILABLE" ? "● Aktif" : "✓ Terjual"}
+                                  </span>
+                                </div>
+
+                                {/* OVR bottom */}
+                                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
+                                  {l.details.overall ? (
+                                    <span className="text-[11px] font-black px-2.5 py-0.5 rounded bg-blue-600 text-white shadow-xs">
+                                      OVR {l.details.overall}
+                                    </span>
+                                  ) : <span />}
+                                  <span className="text-[11px] font-bold text-white/90 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-sm">
+                                    <Eye size={12} /> {l.viewCount}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Body */}
+                              <div className="p-3.5 flex flex-col flex-1 justify-between">
+                                <div>
+                                  <h4 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug mb-2 group-hover:text-emerald-700 transition-colors">
+                                    {l.title}
+                                  </h4>
+                                  <p className="font-black text-slate-900 text-base mb-3">{formatRupiah(l.price)}</p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
+                                  {l.status === "AVAILABLE" && (
+                                    <Button variant="outline" size="sm" onClick={() => handleTogglePause(l.id)} className="text-xs flex-1">
+                                      {l.isPaused
+                                        ? <><PlayCircle size={13} className="mr-1 text-emerald-600" /> Aktifkan</>
+                                        : <><PauseCircle size={13} className="mr-1 text-amber-600" /> Jeda</>}
+                                    </Button>
+                                  )}
+                                  <Button variant="outline" size="sm" onClick={() => handleCopyLink(l.id)} className="text-xs flex-1 text-slate-600 hover:text-blue-600">
+                                    {copiedId === l.id
+                                      ? <><Check size={13} className="mr-1 text-emerald-600" /> Tersalin</>
+                                      : <><Share2 size={13} className="mr-1" /> Bagikan</>}
+                                  </Button>
+                                  <Link href={`/listings/${l.id}`} className="flex-1">
+                                    <Button variant="secondary" size="sm" className="text-xs w-full">Lihat Iklan</Button>
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Active Escrow Orders */}
-            {activeOrders.length > 0 && (
-              <div className="bg-white rounded-2xl border border-emerald-200 shadow-xs p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Pesanan & Serah Terima yang Sedang Berjalan</h3>
-                  </div>
-                  <Link href="/user/transactions">
-                    <span className="text-xs text-emerald-600 hover:text-emerald-700 font-bold">Lihat Semua Pesanan →</span>
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {activeOrders.slice(0, 2).map((order) => (
-                    <div key={order.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{order.listing.game}</span>
-                          <p className="font-bold text-slate-800 text-sm">{order.listing.title}</p>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          Pembeli: <strong>{order.buyer.username}</strong> • Admin: <strong>{order.admin.user.username}</strong> • {formatRupiah(order.price)}
-                        </p>
-                      </div>
-                      <Link href={`/user/transactions/${order.id}`}>
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">Buka Room Serah Terima</Button>
-                      </Link>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
 
-            {/* Listings Management */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Kelola Katalog Iklan Saya</h2>
-                  <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan iklan sementara.</p>
+            {/* VIEW 2: FULL CHAT CONSOLE */}
+            {sellerView === "chat" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setSellerView("overview")}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Kembali ke Ringkasan</span>
+                  </button>
+                  <span className="text-xs text-slate-400 font-medium">Mode Pusat Diskusi & Chat Calon Pembeli</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
-                    {(["ALL", "AVAILABLE", "SOLD"] as const).map((f) => (
-                      <button key={f} onClick={() => setListingFilter(f)}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
-                        {f === "ALL" && `Semua (${myListings.length})`}
-                        {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
-                        {f === "SOLD" && `Terjual (${soldListings.length})`}
-                      </button>
-                    ))}
+
+                {/* Inquiries — Modern Split Inbox Console */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+                  {/* Header */}
+                  <div className="shrink-0 p-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-50/50 via-white to-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold shrink-0">
+                        <MessageCircle size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-slate-900 text-sm sm:text-base">Pusat Diskusi & Chat Calon Pembeli</h3>
+                          {unrepliedInquiriesCount > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 animate-pulse">
+                              {unrepliedInquiriesCount} Butuh Balasan
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Semua Terjawab
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-400">Tanggapi cepat pertanyaan calon pembeli untuk menaikkan reputasi dan mempercepat penjualan akun.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-slate-400">Total:</span>
+                      <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">{inquiries.length} Percakapan</span>
+                    </div>
                   </div>
-                  <Link href="/listings/new">
-                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
-                      <PlusCircle size={13} className="mr-1" /> Iklan Baru
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              <div className="p-4 sm:p-6">
-                {filteredSellerListings.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 text-xs">Tidak ada iklan pada kategori ini.</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredSellerListings.map((l) => {
-                      const imgSrc = l.images && l.images.length > 0 ? l.images[0] : "/screenshots/efootball_89.jpg";
-                      return (
-                        <div
-                          key={l.id}
-                          className={`group rounded-2xl border flex flex-col justify-between overflow-hidden transition-all duration-200 ${
-                            l.isPaused
-                              ? "border-dashed border-slate-300 opacity-70 bg-slate-50"
-                              : "border-slate-200 bg-white hover:border-emerald-400 hover:shadow-lg"
-                          }`}
-                        >
-                          {/* Photo */}
-                          <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={imgSrc}
-                              alt={l.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-                            {/* Top Badges */}
-                            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
-                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-md uppercase tracking-wider">
-                                {l.game}
-                              </span>
-                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md ${
-                                l.isPaused
-                                  ? "bg-amber-500/90 text-white"
-                                  : l.status === "AVAILABLE"
-                                  ? "bg-emerald-500/90 text-white"
-                                  : "bg-slate-600/90 text-white"
+                  {/* Master-Detail 2-Panel Area: Fixed height h-[560px] with min-h-0 for proper inner scroll */}
+                  <div className="flex flex-col md:flex-row h-[560px] max-h-[560px] overflow-hidden w-full min-w-0">
+                    {/* Left Panel: Search & Inquiries List */}
+                    <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 min-w-0 flex flex-col h-full min-h-0 border-r border-slate-100 bg-slate-50/40 ${mobileInquiryView === "chat" ? "hidden md:flex" : "flex"}`}>
+                      {/* Search Bar */}
+                      <div className="shrink-0 p-3 border-b border-slate-100 bg-white">
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Cari pembeli, akun, atau pesan..."
+                            value={inquirySearch}
+                            onChange={(e) => setInquirySearch(e.target.value)}
+                            className="w-full pl-8 pr-7 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-purple-500 focus:bg-white transition-all"
+                          />
+                          {inquirySearch && (
+                            <button
+                              onClick={() => setInquirySearch("")}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Filter Pills */}
+                        <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5">
+                          <button
+                            onClick={() => setInquiryFilter("ALL")}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+                              inquiryFilter === "ALL"
+                                ? "bg-purple-600 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            Semua ({inquiries.length})
+                          </button>
+                          <button
+                            onClick={() => setInquiryFilter("UNREPLIED")}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
+                              inquiryFilter === "UNREPLIED"
+                                ? "bg-purple-600 text-white shadow-xs"
+                                : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                            }`}
+                          >
+                            <span>Belum Dibalas</span>
+                            {unrepliedInquiriesCount > 0 && (
+                              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
+                                inquiryFilter === "UNREPLIED" ? "bg-white text-purple-700 font-black" : "bg-purple-600 text-white font-bold"
                               }`}>
-                                {l.isPaused ? "⏸ Dijeda" : l.status === "AVAILABLE" ? "● Aktif" : "✓ Terjual"}
+                                {unrepliedInquiriesCount}
                               </span>
-                            </div>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setInquiryFilter("REPLIED")}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
+                              inquiryFilter === "REPLIED"
+                                ? "bg-purple-600 text-white shadow-xs"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            Selesai ({inquiries.filter((i) => i.replied).length})
+                          </button>
+                        </div>
+                      </div>
 
-                            {/* OVR bottom */}
-                            <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
-                              {l.details.overall ? (
-                                <span className="text-[11px] font-black px-2.5 py-0.5 rounded bg-blue-600 text-white shadow-xs">
-                                  OVR {l.details.overall}
-                                </span>
-                              ) : <span />}
-                              <span className="text-[11px] font-bold text-white/90 flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-sm">
-                                <Eye size={12} /> {l.viewCount}
-                              </span>
-                            </div>
+                      {/* Scrollable Inquiries Threads List */}
+                      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-slate-100/80">
+                        {filteredInquiries.length === 0 ? (
+                          <div className="p-8 text-center text-slate-400">
+                            <MessageSquare size={28} className="mx-auto mb-2 text-slate-300 stroke-1" />
+                            <p className="text-xs font-semibold text-slate-600">Tidak ada pesan ditemukan</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau filter status.</p>
                           </div>
+                        ) : (
+                          filteredInquiries.map((inq) => {
+                            const isSelected = selectedInquiry?.id === inq.id;
+                            return (
+                              <div
+                                key={inq.id}
+                                onClick={() => {
+                                  setSelectedInquiryId(inq.id);
+                                  setMobileInquiryView("chat");
+                                }}
+                                className={`p-3.5 transition-all cursor-pointer relative text-left select-none ${
+                                  isSelected
+                                    ? "bg-purple-50/70 border-l-4 border-l-purple-600"
+                                    : "hover:bg-slate-100/70 bg-white"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2 mb-1.5 min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                                      !inq.replied ? "bg-purple-600 text-white ring-2 ring-purple-100" : "bg-slate-200 text-slate-700"
+                                    }`}>
+                                      {inq.buyerName.slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-slate-900 text-xs truncate">{inq.buyerName}</span>
+                                        {!inq.replied && (
+                                          <span className="w-2 h-2 rounded-full bg-purple-600 shrink-0" />
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] text-slate-400">{inq.time}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 shrink-0 max-w-[100px] truncate">
+                                    {inq.game || "Game"}
+                                  </span>
+                                </div>
 
-                          {/* Body */}
-                          <div className="p-3.5 flex flex-col flex-1 justify-between">
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug mb-2 group-hover:text-emerald-700 transition-colors">
-                                {l.title}
-                              </h4>
-                              <p className="font-black text-slate-900 text-base mb-3">{formatRupiah(l.price)}</p>
+                                <p className="text-xs text-slate-600 line-clamp-1 font-medium pl-10 mb-1.5 break-words">
+                                  {inq.question}
+                                </p>
+
+                                <div className="flex items-center justify-between pl-10 text-[10px] gap-2">
+                                  <span className="text-slate-400 truncate min-w-0">
+                                    {inq.listingTitle}
+                                  </span>
+                                  {inq.replied ? (
+                                    <span className="inline-flex items-center gap-1 font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">
+                                      <CheckCircle2 size={10} /> Terjawab
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 shrink-0">
+                                      Perlu Balasan
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Panel: Conversation View & Quick Reply Console */}
+                    <div className={`flex-1 min-w-0 flex flex-col h-full min-h-0 bg-white ${mobileInquiryView === "list" ? "hidden md:flex" : "flex"}`}>
+                      {selectedInquiry ? (
+                        <>
+                          {/* Active Chat Header */}
+                          <div className="shrink-0 p-3.5 sm:px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2 bg-white min-w-0">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* Mobile Back Button */}
+                              <button
+                                onClick={() => setMobileInquiryView("list")}
+                                className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 cursor-pointer"
+                              >
+                                <ArrowLeft size={16} />
+                              </button>
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                {selectedInquiry.buyerName.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">{selectedInquiry.buyerName}</h4>
+                                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium shrink-0">Calon Pembeli</span>
+                                </div>
+                                <p className="text-[11px] text-slate-400 flex items-center gap-1 truncate">
+                                  <span className="shrink-0">Menanyakan:</span>
+                                  <span className="font-semibold text-slate-700 truncate">{selectedInquiry.listingTitle}</span>
+                                </p>
+                              </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
-                              {l.status === "AVAILABLE" && (
-                                <Button variant="outline" size="sm" onClick={() => handleTogglePause(l.id)} className="text-xs flex-1">
-                                  {l.isPaused
-                                    ? <><PlayCircle size={13} className="mr-1 text-emerald-600" /> Aktifkan</>
-                                    : <><PauseCircle size={13} className="mr-1 text-amber-600" /> Jeda</>}
-                                </Button>
-                              )}
-                              <Button variant="outline" size="sm" onClick={() => handleCopyLink(l.id)} className="text-xs flex-1 text-slate-600 hover:text-blue-600">
-                                {copiedId === l.id
-                                  ? <><Check size={13} className="mr-1 text-emerald-600" /> Tersalin</>
-                                  : <><Share2 size={13} className="mr-1" /> Bagikan</>}
-                              </Button>
-                              <Link href={`/listings/${l.id}`} className="flex-1">
-                                <Button variant="secondary" size="sm" className="text-xs w-full">Lihat Iklan</Button>
+                            {/* Direct Listing / Escrow Links */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Link
+                                href={`/listings/${selectedInquiry.listingId}`}
+                                className="text-[11px] text-slate-600 hover:text-blue-600 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 inline-flex items-center gap-1 transition-colors shrink-0 cursor-pointer"
+                              >
+                                <Eye size={12} /> <span className="hidden sm:inline">Lihat Postingan</span>
+                              </Link>
+                              <Link
+                                href={`/user/transactions/${selectedInquiry.transactionId || "trx_1"}`}
+                                className="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition-colors shrink-0"
+                              >
+                                <MessageSquare size={12} /> <span className="hidden sm:inline">Room Rekber</span> →
                               </Link>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Tarik Saldo Button */}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  setWithdrawContext("seller");
-                  setWithdrawAmountInput("2.450.000");
-                  setIsWithdrawModalOpen(true);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm"
-              >
-                <ArrowUpRight size={16} className="mr-1.5" /> Tarik Saldo Penjualan
-              </Button>
-            </div>
+                          {/* Listing Context Ribbon */}
+                          <div className="shrink-0 px-4 py-2 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-xs min-w-0 gap-2">
+                            <div className="flex items-center gap-2 truncate min-w-0">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 shrink-0">
+                                {selectedInquiry.game || "Game"}
+                              </span>
+                              <span className="font-bold text-slate-800 truncate">{selectedInquiry.listingTitle}</span>
+                            </div>
+                            {selectedInquiry.price && (
+                              <span className="font-black text-emerald-700 shrink-0">
+                                {formatRupiah(selectedInquiry.price)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Chat Messages Feed with min-h-0 and auto scroll */}
+                          <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-5 space-y-3.5 bg-slate-50/30">
+                            <div className="text-center my-1">
+                              <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2.5 py-0.5 rounded-full">
+                                Pertanyaan calon pembeli diterima • {selectedInquiry.time}
+                              </span>
+                            </div>
+
+                            {/* Buyer's Question Bubble */}
+                            <div className="flex items-start gap-2.5 max-w-[85%]">
+                              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                {selectedInquiry.buyerName.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <span className="text-xs font-bold text-slate-900">{selectedInquiry.buyerName}</span>
+                                  <span className="text-[10px] text-slate-400">{selectedInquiry.time}</span>
+                                </div>
+                                <div className="bg-white border border-slate-200/90 rounded-2xl rounded-tl-xs p-3.5 shadow-xs text-xs text-slate-800 leading-relaxed font-medium break-words">
+                                  {selectedInquiry.question}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Seller's Previous Reply (if exists) */}
+                            {selectedInquiry.replied && (
+                              <div className="flex items-start justify-end gap-2.5 max-w-[85%] ml-auto">
+                                <div className="text-right min-w-0">
+                                  <div className="flex items-center justify-end gap-1.5 mb-1">
+                                    <span className="text-[10px] text-slate-400">{selectedInquiry.replyTime || "Telah dijawab"}</span>
+                                    <span className="text-xs font-bold text-emerald-700">Anda (Penjual)</span>
+                                  </div>
+                                  <div className="bg-emerald-600 text-white rounded-2xl rounded-tr-xs p-3.5 shadow-xs text-xs leading-relaxed font-medium text-left break-words">
+                                    {selectedInquiry.replyText || "Pertanyaan telah dijawab kepada calon pembeli."}
+                                  </div>
+                                  <div className="flex items-center justify-end gap-1 text-[10px] text-emerald-600 font-semibold mt-1">
+                                    <CheckCircle2 size={11} /> Terkirim ke pembeli & riwayat chat rekber
+                                  </div>
+                                </div>
+                                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                                  ME
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quick Template Replies Chips */}
+                          <div className="shrink-0 px-4 py-2 border-t border-slate-100 bg-white">
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                              <span className="text-slate-400 font-semibold shrink-0 text-[10px] flex items-center gap-1">
+                                <Sparkles size={11} className="text-amber-500" /> Balas Cepat:
+                              </span>
+                              {quickReplies.map((qr, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setReplyInput((prev) => ({ ...prev, [selectedInquiry.id]: qr }));
+                                  }}
+                                  className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200/80 transition-colors text-[11px] truncate max-w-[200px] cursor-pointer"
+                                  title={qr}
+                                >
+                                  {qr}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Reply Input Bar */}
+                          <div className="shrink-0 p-3.5 sm:px-4 border-t border-slate-100 bg-white">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder={selectedInquiry.replied ? "Kirim balasan tambahan..." : `Tulis balasan untuk ${selectedInquiry.buyerName}...`}
+                                value={replyInput[selectedInquiry.id] || ""}
+                                onChange={(e) => setReplyInput({ ...replyInput, [selectedInquiry.id]: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendReply(selectedInquiry.id);
+                                  }
+                                }}
+                                className="flex-1 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-600 text-slate-900 transition-all placeholder:text-slate-400"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleSendReply(selectedInquiry.id)}
+                                disabled={!replyInput[selectedInquiry.id]?.trim()}
+                                className="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs px-4 py-2.5 h-auto font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                              >
+                                <Send size={13} />
+                                <span>Kirim</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                          <MessageCircle size={36} className="text-slate-300 stroke-1 mb-2" />
+                          <p className="text-sm font-semibold text-slate-600">Pilih salah satu percakapan</p>
+                          <p className="text-xs text-slate-400 mt-1">Pilih pertanyaan dari daftar di sebelah kiri untuk melihat pesan dan membalas calon pembeli.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: ACTIVE ORDERS */}
+            {sellerView === "orders" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setSellerView("overview")}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Kembali ke Ringkasan</span>
+                  </button>
+                  <span className="text-xs text-slate-400 font-medium">Mode Pesanan & Serah Terima Rekber</span>
+                </div>
+
+                {/* Active Escrow Orders */}
+                <div className="bg-white rounded-2xl border border-emerald-200 shadow-xs p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <h3 className="font-bold text-slate-900 text-sm sm:text-base">Pesanan & Serah Terima yang Sedang Berjalan</h3>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {activeOrders.length} Aktif
+                      </span>
+                    </div>
+                    <Link href="/user/transactions">
+                      <span className="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1">
+                        Lihat Semua Riwayat <ChevronRight size={14} />
+                      </span>
+                    </Link>
+                  </div>
+                  {activeOrders.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 text-xs">Tidak ada transaksi yang sedang berjalan.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {activeOrders.map((order) => (
+                        <div key={order.id} className="flex flex-col justify-between gap-3 p-4 rounded-xl bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 transition-all">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{order.listing.game}</span>
+                              <span className="font-mono text-xs font-bold text-slate-700">{order.id}</span>
+                            </div>
+                            <p className="font-bold text-slate-900 text-sm line-clamp-1">{order.listing.title}</p>
+                            <div className="text-xs text-slate-500 mt-1.5 space-y-0.5">
+                              <p>Pembeli: <span className="font-bold text-slate-800">{order.buyer.username}</span></p>
+                              <p>Admin Rekber: <span className="font-bold text-slate-800">{order.admin.user.username}</span></p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 mt-1">
+                            <span className="font-black text-slate-900 text-sm">{formatRupiah(order.price)}</span>
+                            <Link href={`/user/transactions/${order.id}`}>
+                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 h-auto font-bold rounded-lg cursor-pointer">
+                                Buka Room Serah Terima →
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

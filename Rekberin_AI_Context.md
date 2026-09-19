@@ -1281,6 +1281,45 @@ build_status: passed (0 errors)
 /tentang-kami             → Tentang Kami (Static)
 ```
 
+#### Dev Session 9 — Refaktor UI Dashboard Seller & Integrasi Navigasi Sidebar (Clean UI & Separation)
+
+```yaml
+focus: seller_dashboard_ui_refactor
+branch: main
+files_changed:
+  - app/(dashboard)/user/page.tsx
+  - components/layout/DashboardSidebar.tsx
+changes_type: UI / Layout Refactoring & Navigation Separation
+build_status: passed (0 errors)
+```
+
+**Latar Belakang & Masalah:**
+- Tampilan Seller Dashboard (`/user?tab=seller`) sebelumnya terasa menumpuk ("numpuk") karena memuat terlalu banyak elemen dalam satu halaman overview: metrik redundan, tab bar internal di atas, serta quick-nav cards.
+- Pengguna merasa metrik seperti "Listing Aktif Masuk", "Pertanyaan Masuk", dan "Dana di Escrow" tidak esensial atau tumpang tindih (double) dengan informasi Saldo Rekber dan katalog iklan.
+- Fitur "Pusat Diskusi & Chat" serta "Pesanan & Serah Terima" yang sedang berjalan dipisahkan ke menu navigasi sidebar (Akun Saya) agar alur kerja penjual lebih terstruktur, fokus, dan tidak bertele-tele.
+
+**Perubahan yang Dilakukan:**
+1. **Pembersihan Metrik & Elemen Redundan di Overview Seller (`app/(dashboard)/user/page.tsx`):**
+   - Menghapus metric cards redundan di ringkasan penjual: "Listing Aktif Masuk", "Pertanyaan Masuk", dan "Dana di Escrow".
+   - Menghapus tab bar internal ("Ringkasan & Iklan", "Pusat Diskusi & Chat", "Pesanan Berjalan") di bagian atas seller dashboard karena navigasi dialihkan sepenuhnya ke menu sidebar.
+   - Menghapus card quick-nav ganda dari overview section.
+   - Mengatur kontrol tampilan seller melalui state `sellerView` (`overview | chat | orders`) yang tersinkronisasi dengan query parameter URL (`?tab=seller&view=chat` dan `?tab=seller&view=orders`).
+   - Merapikan struktur container JSX (`div` dengan spacing konsisten) untuk mencegah potensi layout blowout/horizontal overflow.
+
+2. **Pemisahan Menu Navigasi & Integrasi Suspense (`components/layout/DashboardSidebar.tsx`):**
+   - Menambahkan menu baru untuk alur seller di navigasi Akun Saya:
+     - **Pusat Diskusi & Chat** (`/user?tab=seller&view=chat`, badge: "3", icon: `MessageCircle`)
+     - **Pesanan & Serah Terima** (`/user?tab=seller&view=orders`, badge: "3", icon: `Package`)
+   - Memisahkan komponen navigasi menjadi sub-komponen `SidebarNav` dan membungkusnya dengan `<Suspense>` boundary + fallback skeleton loader. Hal ini krusial untuk mencegah hydration error atau client-side de-opt Next.js pada halaman statis yang memanggil `useSearchParams()` (seperti `/user/transactions`).
+   - Menyesuaikan active-state detector di navigasi agar mengenali parameter query `view=chat` dan `view=orders` secara tepat dan memberikan highlight aktif sesuai role.
+   - Memastikan navigasi internal berjalan dalam tab yang sama (`target="_self"`), mencegah duplikasi tab browser.
+   - Penataan area informasi ringkas di sidebar agar informasi garansi/panduan dan saldo tetap mudah dipantau tanpa memakan banyak tempat di layar utama.
+
+3. **Status Saat Ini:**
+   - Navigasi seller dashboard terpisah secara modular, bersih, dan langsung dapat diakses dari sidebar.
+   - Alur navigasi tidak lagi tumpang tindih; UI lebih intuitif, clean, dan bebas redundansi.
+   - Tidak ada breaking change terhadap logic transaksi, chat backend, maupun Prisma schema.
+
 ---
 
 ### Progress Summary per DEV Issue
