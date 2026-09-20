@@ -6,6 +6,7 @@ import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
+import { TransactionChat } from "@/components/dashboard/TransactionChat";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRupiah } from "@/lib/utils";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
@@ -174,16 +175,15 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
           </Card>
         </div>
 
-        <Card>
-          <h3 className="font-semibold text-sm sm:text-base">Fitur transaksi lanjutan</h3>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            Pembayaran, handover, dispute, brankas akun, dan chat belum tersedia pada tahap ini.
-            Tidak ada aksi atau data sensitif yang dapat dikirim dari halaman transaksi.
-          </p>
-          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs font-semibold text-slate-500" aria-disabled="true">
-            Belum tersedia — menunggu tahap implementasi berikutnya
-          </div>
-        </Card>
+        <TransactionChat
+          transactionId={tx.id}
+          transactionStatus={tx.status}
+          defaultRole="BUYER"
+          defaultUserName={tx.buyer.username}
+          buyerName={tx.buyer.username}
+          sellerName={tx.listing.seller.username}
+          adminName={tx.admin.user.username}
+        />
       </div>
     </div>
   );

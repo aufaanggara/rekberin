@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Send, ShieldCheck, User, Store, Lock, Info, Image as ImageIcon, X, ZoomIn, Paperclip, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { useStore } from "@/store/useStore";
-import type { ChatSenderRole } from "@/types";
+import type { ChatSenderRole, TransactionStatus } from "@/types";
 import { toast } from "sonner";
 
 interface TransactionChatProps {
@@ -15,6 +14,29 @@ interface TransactionChatProps {
   buyerName: string;
   sellerName: string;
   adminName: string;
+  transactionStatus?: TransactionStatus;
+}
+
+interface ApiChatMessage {
+  id: string;
+  transactionId: string;
+  sender: {
+    username: string;
+    fullName: string;
+    role: "USER" | "ADMIN" | "SUPER_ADMIN";
+  };
+  message: string;
+  createdAt: string;
+}
+
+interface ChatMessageView {
+  id: string;
+  transactionId: string;
+  senderRole: ChatSenderRole;
+  senderName: string;
+  message: string;
+  timestamp: string;
+  attachmentUrl?: string;
 }
 
 const screenshotPresets = [
@@ -30,6 +52,7 @@ export function TransactionChat({
   buyerName,
   sellerName,
   adminName,
+  transactionStatus,
 }: TransactionChatProps) {
   const [activeRole, setActiveRole] = useState<ChatSenderRole>(defaultRole);
   const [inputText, setInputText] = useState("");
@@ -39,14 +62,56 @@ export function TransactionChat({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<ChatMessageView[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const isChatClosed = transactionStatus === "COMPLETED" || transactionStatus === "CANCELLED";
 
-  const { chatMessages, addChatMessage, isTyping } = useStore();
-  const messages = chatMessages.filter((m) => m.transactionId === transactionId);
+  const getMessageRole = (message: ApiChatMessage): ChatSenderRole => {
+    if (message.sender.role === "ADMIN" || message.sender.role === "SUPER_ADMIN") return "ADMIN";
+    if ([message.sender.username, message.sender.fullName].includes(sellerName)) return "SELLER";
+    return "BUYER";
+  };
+
+  const loadMessages = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
+
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}/messages`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Gagal memuat pesan");
+
+      const data = (await response.json()) as { messages: ApiChatMessage[] };
+      setMessages(
+        data.messages.map((message) => ({
+          id: message.id,
+          transactionId: message.transactionId,
+          senderRole: getMessageRole(message),
+          senderName: message.sender.fullName || message.sender.username,
+          message: message.message,
+          timestamp: message.createdAt,
+        }))
+      );
+      setLoadError(null);
+    } catch {
+      setLoadError("Pesan belum dapat dimuat. Coba lagi sebentar.");
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadMessages(true);
+    const interval = window.setInterval(() => void loadMessages(), 5000);
+    return () => window.clearInterval(interval);
+  }, [transactionId]);
 
   // Auto-scroll to bottom on new message or typing status
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, isTyping]);
+  }, [messages.length]);
 
   const getSenderDisplayName = (role: ChatSenderRole) => {
     if (role === "BUYER") return buyerName;
@@ -73,24 +138,31 @@ export function TransactionChat({
     reader.readAsDataURL(file);
   };
 
-  const handleSend = (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = inputText.trim();
-    if (!trimmed && !attachment) return;
+    if ((!trimmed && !attachment) || isChatClosed || isSending) return;
 
-    const senderName = defaultUserName || getSenderDisplayName(activeRole);
-    addChatMessage(
-      transactionId,
-      activeRole,
-      senderName,
-      trimmed || (attachment ? "📷 [Lampiran Foto/Screenshot]" : ""),
-      attachment || undefined,
-      attachment ? "IMAGE" : undefined
-    );
+    setIsSending(true);
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: trimmed || "[Lampiran Foto/Screenshot]",
+        }),
+      });
+      if (!response.ok) throw new Error("Pesan gagal dikirim");
 
-    setInputText("");
-    setAttachment(null);
-    setShowPresets(false);
+      setInputText("");
+      setAttachment(null);
+      setShowPresets(false);
+      await loadMessages();
+    } catch {
+      toast.error("Pesan gagal dikirim. Coba lagi.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -205,7 +277,11 @@ export function TransactionChat({
 
         {/* Chat Messages List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/40">
-          {messages.length === 0 ? (
+          {isLoading ? (
+            <div className="h-full flex items-center justify-center text-sm text-slate-400">
+              Memuat percakapan...
+            </div>
+          ) : messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6">
               <Info size={36} className="text-slate-300 mb-2" />
               <p className="text-sm font-medium">Belum ada percakapan.</p>
@@ -348,22 +424,7 @@ export function TransactionChat({
             })
           )}
 
-          {/* Real-time typing indicator */}
-          {isTyping && (
-            <div className="flex items-center gap-2.5">
-              <Avatar name={isTyping.name} size={30} />
-              <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-xs px-3.5 py-2 shadow-2xs flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">
-                  {isTyping.name} sedang mengetik
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
-                </div>
-              </div>
-            </div>
-          )}
+          {loadError && <p className="text-center text-xs text-rose-600">{loadError}</p>}
 
           <div ref={messagesEndRef} />
         </div>
@@ -416,6 +477,7 @@ export function TransactionChat({
               key={idx}
               type="button"
               onClick={() => setInputText(q)}
+              disabled={isChatClosed || isSending}
               className="text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer shrink-0"
             >
               {q}
@@ -441,6 +503,7 @@ export function TransactionChat({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isChatClosed || isSending}
             className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Upload Foto / Screenshot"
           >
@@ -450,6 +513,7 @@ export function TransactionChat({
           <button
             type="button"
             onClick={() => setShowPresets(!showPresets)}
+            disabled={isChatClosed || isSending}
             className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Pilih Template Gambar"
           >
@@ -461,6 +525,7 @@ export function TransactionChat({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isChatClosed || isSending}
             placeholder={`Kirim pesan atau foto sebagai ${
               activeRole === "BUYER" ? "Pembeli" : activeRole === "SELLER" ? "Penjual" : "Admin"
             }...`}
@@ -468,13 +533,18 @@ export function TransactionChat({
           />
           <button
             type="submit"
-            disabled={!inputText.trim() && !attachment}
+            disabled={isChatClosed || isSending || (!inputText.trim() && !attachment)}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
           >
             <Send size={15} />
             <span className="hidden sm:inline">Kirim</span>
           </button>
         </form>
+        {isChatClosed && (
+          <div className="bg-slate-100 border-t border-slate-200 px-4 py-2 text-center text-xs text-slate-500">
+            Chat ditutup karena transaksi sudah selesai atau dibatalkan.
+          </div>
+        )}
       </div>
 
       {/* Lightbox for zooming chat images */}
