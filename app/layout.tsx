@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvider";
 import { ServiceWorkerRegister } from "@/components/providers/ServiceWorkerRegister";
+import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
 import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
@@ -37,11 +38,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#2563eb" />
       </head>
       <body className="font-sans bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-blue-100 selection:text-blue-700">
-        <SmoothScrollProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </SmoothScrollProvider>
+        <AuthSessionProvider>
+          <SmoothScrollProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </SmoothScrollProvider>
+        </AuthSessionProvider>
         <Toaster theme="light" position="top-center" richColors />
         <ServiceWorkerRegister />
       </body>

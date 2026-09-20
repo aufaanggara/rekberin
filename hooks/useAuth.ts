@@ -1,7 +1,12 @@
-// Placeholder hook — sambungkan ke NextAuth `useSession()` setelah backend aktif.
-import { useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 
 export function useAuth() {
-  const [user] = useState(null);
-  return { user, isLoading: false };
+  const { data: session, status } = useSession();
+
+  return {
+    user: session?.user ?? null,
+    isLoading: status === "loading",
+    isAuthenticated: status === "authenticated",
+    logout: () => signOut({ callbackUrl: "/" }),
+  };
 }

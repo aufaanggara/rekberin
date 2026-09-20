@@ -11,6 +11,7 @@
     "test": "node --import tsx --test tests/transaction-flow.test.ts",
     "test:integration": "node --import tsx --test tests/transaction-database.integration.test.ts",
     "test:e2e": "tsx tests/transaction-http.e2e.ts",
+    "test:auth:e2e": "tsx tests/authentication-authorization.e2e.ts",
     "typecheck": "tsc --noEmit",
     "scrape:pesdb": "node --use-system-ca --import tsx scripts/scrape-pesdb.ts",
     "auth:check": "tsx scripts/seed-test-auth.ts",

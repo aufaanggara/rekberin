@@ -6,67 +6,56 @@ import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
-  const [role, setRole] = useState<"USER" | "ADMIN">("USER");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      toast.success(
-        role === "ADMIN"
-          ? "Pendaftaran admin rekber terkirim, menunggu approval (demo)"
-          : "Registrasi berhasil (demo)"
-      );
+    setError(null);
+
+    const form = new FormData(e.currentTarget as unknown as HTMLFormElement);
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(form.entries())),
+    });
+
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setError(payload.error ?? "Registrasi tidak dapat diproses.");
       setLoading(false);
-    }, 800);
+      return;
+    }
+
+    toast.success("Registrasi berhasil. Silakan masuk dengan akun Anda.");
+    setLoading(false);
   }
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <Card>
         <h1 className="font-display text-2xl font-bold mb-1">Daftar Rekberin</h1>
-        <p className="text-txt-secondary text-sm mb-6">Pilih peran Anda untuk memulai.</p>
+        <p className="text-txt-secondary text-sm mb-6">Buat akun untuk membeli atau menjual akun game.</p>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <button
-            type="button"
-            onClick={() => setRole("USER")}
-            className={`rounded-xl border p-4 text-left text-sm ${role === "USER" ? "border-accent-primary bg-accent-primary/5" : "border-border"}`}
-          >
-            <p className="font-semibold mb-1">Beli / Jual Akun</p>
-            <p className="text-txt-secondary text-xs">Sebagai buyer &amp; seller</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => setRole("ADMIN")}
-            className={`rounded-xl border p-4 text-left text-sm ${role === "ADMIN" ? "border-accent-primary bg-accent-primary/5" : "border-border"}`}
-          >
-            <p className="font-semibold mb-1">Admin Rekber</p>
-            <p className="text-txt-secondary text-xs">Perlu approval</p>
-          </button>
-        </div>
+        {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs text-txt-muted uppercase tracking-wider">Nama Lengkap</label>
-            <input required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
+            <label htmlFor="fullName" className="text-xs text-txt-muted uppercase tracking-wider">Nama Lengkap</label>
+            <input id="fullName" name="fullName" autoComplete="name" required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
           </div>
           <div>
-            <label className="text-xs text-txt-muted uppercase tracking-wider">Username</label>
-            <input required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
+            <label htmlFor="username" className="text-xs text-txt-muted uppercase tracking-wider">Username</label>
+            <input id="username" name="username" autoComplete="username" required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
           </div>
           <div>
-            <label className="text-xs text-txt-muted uppercase tracking-wider">Email</label>
-            <input type="email" required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
+            <label htmlFor="email" className="text-xs text-txt-muted uppercase tracking-wider">Email</label>
+            <input id="email" name="email" type="email" autoComplete="email" required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
           </div>
           <div>
-            <label className="text-xs text-txt-muted uppercase tracking-wider">No. WhatsApp</label>
-            <input required placeholder="628xxxxxxxxxx" className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
-          </div>
-          <div>
-            <label className="text-xs text-txt-muted uppercase tracking-wider">Password</label>
-            <input type="password" required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
+            <label htmlFor="password" className="text-xs text-txt-muted uppercase tracking-wider">Password</label>
+            <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required className="w-full mt-1 bg-bg-elevated border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:border-accent-primary" />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>{loading ? "Memproses..." : "Daftar"}</Button>
         </form>
