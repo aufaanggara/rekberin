@@ -9,6 +9,14 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres?schema=public"
+      DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+      NEXTAUTH_SECRET: "ci_nextauth_secret_key_12345678901234567890"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,4 +37,4 @@ jobs:
         run: npm test
 
       - name: Build application
-        run: npm run build
+        run: npm run build
