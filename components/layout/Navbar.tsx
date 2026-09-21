@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { ShieldCheck, Menu, X, PlusCircle, ChevronRight, MessageSquare, User, LayoutDashboard } from "lucide-react";
+import { ShieldCheck, Menu, X, PlusCircle, ChevronRight, MessageSquare, User, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/hooks/useAuth";
 
 const links = [
   { href: "/", label: "Beranda" },
@@ -14,6 +15,7 @@ const links = [
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [dashboardDropdown, setDashboardDropdown] = useState(false);
+  const { isAuthenticated, isLoading, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
@@ -100,6 +102,21 @@ export function Navbar() {
 
           <div className="h-4 w-px bg-slate-200" />
 
+          {!isLoading && (isAuthenticated ? (
+            <Button variant="ghost" size="sm" onClick={() => void logout()} className="gap-1.5 text-xs">
+              <LogOut size={14} /> Keluar
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="secondary" size="sm" className="text-xs">Masuk</Button>
+              </Link>
+              <Link href="/register">
+                <Button variant="primary" size="sm" className="text-xs">Daftar</Button>
+              </Link>
+            </div>
+          ))}
+
           <Link href="/listings/new">
             <Button
               variant="secondary"
@@ -171,18 +188,29 @@ export function Navbar() {
                 <PlusCircle size={16} /> Pasang Iklan Akun
               </Button>
             </Link>
-            <div className="grid grid-cols-2 gap-2">
-              <Link href="/login" onClick={() => setOpen(false)}>
-                <Button variant="secondary" size="md" className="w-full">
-                  Masuk
-                </Button>
-              </Link>
-              <Link href="/register" onClick={() => setOpen(false)}>
-                <Button variant="primary" size="md" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  Daftar
-                </Button>
-              </Link>
-            </div>
+            {!isLoading && (isAuthenticated ? (
+              <Button
+                variant="secondary"
+                size="md"
+                className="w-full gap-2 justify-center"
+                onClick={() => void logout()}
+              >
+                <LogOut size={16} /> Keluar
+              </Button>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  <Button variant="secondary" size="md" className="w-full">
+                    Masuk
+                  </Button>
+                </Link>
+                <Link href="/register" onClick={() => setOpen(false)}>
+                  <Button variant="primary" size="md" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    Daftar
+                  </Button>
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSession, signIn } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { AlertCircle, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -43,14 +43,9 @@ export default function LoginPage({
         return;
       }
 
-      const session = await getSession();
-      const sessionUser = session?.user as { role?: unknown } | undefined;
       const callbackUrl = safeCallbackUrl(searchParams?.callbackUrl);
-      const fallbackUrl = ["ADMIN", "SUPER_ADMIN"].includes(String(sessionUser?.role))
-        ? "/admin/transactions"
-        : "/user/transactions";
 
-      router.replace(callbackUrl ?? fallbackUrl);
+      router.replace(callbackUrl ?? "/");
       router.refresh();
     } catch {
       setError("Login tidak dapat diproses. Periksa koneksi lalu coba lagi.");
