@@ -52,8 +52,7 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
@@ -75,8 +74,7 @@ const roleConfig = {
     ],
     items: [
       { href: "/user?tab=seller", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
@@ -118,8 +116,7 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
       { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
@@ -140,18 +137,15 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
       </p>
       <nav className="flex flex-col gap-1">
         {currentRole.items.map((item) => {
-          const isChat = item.href.includes("view=chat");
-          const isOrders = item.href.includes("view=orders");
-          const isTransactions = item.href.startsWith("/user/transactions");
+          const isChat = item.href === "/user/chat";
+          const isTransactionsHistory = item.href === "/user/transactions";
           const isDashboard = item.href === "/user" || item.href === "/user?tab=seller";
 
           let active = false;
           if (isChat) {
-            active = pathname === "/user" && currentView === "chat";
-          } else if (isOrders) {
-            active = pathname === "/user" && currentView === "orders";
-          } else if (isTransactions) {
-            active = pathname.startsWith("/user/transactions");
+            active = pathname === "/user/chat" || pathname.startsWith("/user/transactions/");
+          } else if (isTransactionsHistory) {
+            active = pathname === "/user/transactions";
           } else if (isDashboard) {
             active = pathname === "/user" && !currentView;
           } else {
