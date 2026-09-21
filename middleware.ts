@@ -14,7 +14,10 @@ export default withAuth(
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
-    if (pathname.startsWith("/listings/new") && role !== "USER") {
+    if (
+      (pathname.startsWith("/listings/new") || pathname.includes("/edit")) &&
+      role !== "USER"
+    ) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
@@ -31,5 +34,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/user/:path*", "/admin/:path*", "/listings/new/:path*"],
+  matcher: ["/user/:path*", "/admin/:path*", "/listings/new/:path*", "/listings/:id/edit/:path*"],
 };

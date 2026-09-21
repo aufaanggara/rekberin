@@ -35,9 +35,23 @@ const createListingSchema: z.ZodType<CreateListingRequest> = z.object({
   images: z.array(z.string().min(1).max(5_000_000)).max(8),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const mine = searchParams.get("mine") === "true";
+
+    let whereClause: Prisma.ListingWhereInput = {};
+
+    if (mine) {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json({ error: "Login diperlukan." }, { status: 401 });
+      }
+      whereClause = { sellerId: user.id };
+    }
+
     const listings = await prisma.listing.findMany({
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       include: listingInclude,
     });

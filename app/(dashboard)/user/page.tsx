@@ -47,6 +47,8 @@ import {
   ArrowLeft,
   ExternalLink,
   ChevronRight,
+  Pencil,
+  Loader2,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -55,7 +57,9 @@ import { InvoiceModal } from "@/components/dashboard/InvoiceModal";
 import { dummyTransactions, dummyListings } from "@/data/dummy";
 import { formatRupiah } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
-import type { Transaction } from "@/types";
+import { useMyListings, updateListingStatus } from "@/hooks/useListings";
+import { toast } from "sonner";
+import type { Transaction, Listing } from "@/types";
 
 type ActiveTab = "buyer" | "seller";
 type FilterTab = "ALL" | "ACTION_NEEDED" | "IN_PROGRESS" | "COMPLETED" | "WISHLIST";
@@ -208,7 +212,7 @@ function UserDashboardContent() {
   const [isWarrantyGuideOpen, setIsWarrantyGuideOpen] = useState(false);
 
   // ── Seller state ─────────────────────────────────────────────────────────────
-  const [listingFilter, setListingFilter] = useState<"ALL" | "AVAILABLE" | "SOLD">("ALL");
+  const [listingFilter, setListingFilter] = useState<"ALL" | "AVAILABLE" | "INACTIVE" | "SOLD">("ALL");
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawContext, setWithdrawContext] = useState<"buyer" | "seller">("buyer");
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
@@ -224,8 +228,9 @@ function UserDashboardContent() {
   const [selectedInquiryId, setSelectedInquiryId] = useState<string>("inq_1");
   const [mobileInquiryView, setMobileInquiryView] = useState<"list" | "chat">("list");
 
-  const initialMine = dummyListings.filter((l) => l.seller.username === "efootball_seller1");
-  const [myListings, setMyListings] = useState(initialMine.map((l) => ({ ...l, isPaused: false })));
+  // Fetch seller's own listings from API
+  const { data: apiMyListings, isLoading: isMyListingsLoading, error: myListingsError, refetch: refetchMyListings } = useMyListings();
+  const myListings = apiMyListings;
 
   // ── Derived data ─────────────────────────────────────────────────────────────
   const activeTx = dummyTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
@@ -234,7 +239,8 @@ function UserDashboardContent() {
     (t) => t.status === "PENDING_PAYMENT" || t.status === "PENDING_BUYER_CONFIRM"
   ).length;
   const wishlistListings = dummyListings.filter((l) => wishlistIds.includes(l.id));
-  const activeListings = myListings.filter((l) => l.status === "AVAILABLE" && !l.isPaused);
+  const activeListings = myListings.filter((l) => l.status === "AVAILABLE");
+  const inactiveListings = myListings.filter((l) => l.status === "INACTIVE");
   const soldListings = myListings.filter((l) => l.status === "SOLD");
   const activeOrders = dummyTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
   const filteredSellerListings = myListings.filter((l) => {
@@ -260,8 +266,19 @@ function UserDashboardContent() {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
-  const handleTogglePause = (id: string) => {
-    setMyListings((prev) => prev.map((item) => (item.id === id ? { ...item, isPaused: !item.isPaused } : item)));
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const handleTogglePause = async (id: string, currentStatus: string) => {
+    setTogglingId(id);
+    try {
+      const newStatus = currentStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
+      await updateListingStatus(id, newStatus as "INACTIVE" | "AVAILABLE");
+      toast.success(newStatus === "INACTIVE" ? "Listing dinonaktifkan." : "Listing diaktifkan kembali.");
+      refetchMyListings();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengubah status listing.");
+    } finally {
+      setTogglingId(null);
+    }
   };
   const handleWithdraw = (e: React.FormEvent) => {
     e.preventDefault();
@@ -734,12 +751,13 @@ function UserDashboardContent() {
                       <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan post akun sementara.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
-                        {(["ALL", "AVAILABLE", "SOLD"] as const).map((f) => (
+                      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto">
+                        {(["ALL", "AVAILABLE", "INACTIVE", "SOLD"] as const).map((f) => (
                           <button key={f} onClick={() => setListingFilter(f)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
                             {f === "ALL" && `Semua (${myListings.length})`}
                             {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
+                            {f === "INACTIVE" && `Dijeda (${inactiveListings.length})`}
                             {f === "SOLD" && `Terjual (${soldListings.length})`}
                           </button>
                         ))}
@@ -752,8 +770,22 @@ function UserDashboardContent() {
                     </div>
                   </div>
                   <div className="p-4 sm:p-6">
-                    {filteredSellerListings.length === 0 ? (
-                      <div className="text-center py-12 text-slate-400 text-xs">Tidak ada post akun pada kategori ini.</div>
+                    {isMyListingsLoading ? (
+                      <div className="text-center py-12 flex flex-col items-center gap-3">
+                        <Loader2 size={28} className="animate-spin text-emerald-600" />
+                        <p className="text-sm text-slate-500">Memuat katalog iklan...</p>
+                      </div>
+                    ) : myListingsError ? (
+                      <div className="text-center py-12">
+                        <p className="text-sm text-red-500 mb-3">{myListingsError}</p>
+                        <Button variant="outline" size="sm" onClick={() => refetchMyListings()}>Coba Lagi</Button>
+                      </div>
+                    ) : filteredSellerListings.length === 0 ? (
+                      <div className="text-center py-12 text-slate-400 text-xs">
+                        {myListings.length === 0
+                          ? "Belum ada iklan. Buat iklan pertamamu!"
+                          : "Tidak ada iklan pada kategori ini."}
+                      </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {filteredSellerListings.map((l) => {
@@ -762,7 +794,7 @@ function UserDashboardContent() {
                             <div
                               key={l.id}
                               className={`group rounded-2xl border flex flex-col justify-between overflow-hidden transition-all duration-200 ${
-                                l.isPaused
+                                l.status === "INACTIVE"
                                   ? "border-dashed border-slate-300 opacity-70 bg-slate-50"
                                   : "border-slate-200 bg-white hover:border-emerald-400 hover:shadow-lg"
                               }`}
@@ -784,13 +816,13 @@ function UserDashboardContent() {
                                     {l.game}
                                   </span>
                                   <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md ${
-                                    l.isPaused
+                                    l.status === "INACTIVE"
                                       ? "bg-amber-500/90 text-white"
                                       : l.status === "AVAILABLE"
                                       ? "bg-emerald-500/90 text-white"
                                       : "bg-slate-600/90 text-white"
                                   }`}>
-                                    {l.isPaused ? "⏸ Dijeda" : l.status === "AVAILABLE" ? "● Aktif" : "✓ Terjual"}
+                                    {l.status === "INACTIVE" ? "⏸ Dijeda" : l.status === "AVAILABLE" ? "● Aktif" : "✓ Terjual"}
                                   </span>
                                 </div>
 
@@ -818,12 +850,29 @@ function UserDashboardContent() {
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
-                                  {l.status === "AVAILABLE" && (
-                                    <Button variant="outline" size="sm" onClick={() => handleTogglePause(l.id)} className="text-xs flex-1">
-                                      {l.isPaused
-                                        ? <><PlayCircle size={13} className="mr-1 text-emerald-600" /> Aktifkan</>
-                                        : <><PauseCircle size={13} className="mr-1 text-amber-600" /> Jeda</>}
+                                  {(l.status === "AVAILABLE" || l.status === "INACTIVE") && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleTogglePause(l.id, l.status)}
+                                      disabled={togglingId === l.id}
+                                      className="text-xs flex-1"
+                                    >
+                                      {togglingId === l.id ? (
+                                        <><Loader2 size={13} className="mr-1 animate-spin" /> Proses...</>
+                                      ) : l.status === "INACTIVE" ? (
+                                        <><PlayCircle size={13} className="mr-1 text-emerald-600" /> Aktifkan</>
+                                      ) : (
+                                        <><PauseCircle size={13} className="mr-1 text-amber-600" /> Jeda</>
+                                      )}
                                     </Button>
+                                  )}
+                                  {(l.status === "AVAILABLE" || l.status === "INACTIVE") && (
+                                    <Link href={`/listings/${l.id}/edit`} className="flex-1">
+                                      <Button variant="outline" size="sm" className="text-xs w-full text-blue-600 hover:text-blue-700">
+                                        <Pencil size={13} className="mr-1" /> Edit
+                                      </Button>
+                                    </Link>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleCopyLink(l.id)} className="text-xs flex-1 text-slate-600 hover:text-blue-600">
                                     {copiedId === l.id
