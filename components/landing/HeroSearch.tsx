@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Gamepad2,
@@ -65,6 +66,7 @@ const socialFaces = [
 ];
 
 export function HeroSearch() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGame, setSelectedGame] = useState("all");
 
@@ -100,15 +102,11 @@ export function HeroSearch() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const el = document.getElementById("listings-section");
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth" });
-              }
-              let url = `/?q=${encodeURIComponent(searchQuery)}`;
+              const params = new URLSearchParams({ q: searchQuery });
               if (selectedGame !== "all") {
-                url += `&game=${encodeURIComponent(selectedGame)}`;
+                params.set("game", selectedGame);
               }
-              window.history.replaceState(null, "", url);
+              router.push(`/listings?${params.toString()}`);
             }}
             className="flex flex-col md:flex-row items-stretch gap-2"
           >
@@ -159,7 +157,7 @@ export function HeroSearch() {
           {quickTags.map((tag) => (
             <Link
               key={tag.label}
-              href={`/?q=${encodeURIComponent(tag.query)}`}
+              href={`/listings?q=${encodeURIComponent(tag.query)}`}
               className="px-3 py-1 rounded-full bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-300 font-medium transition-colors shadow-xs"
             >
               {tag.label}

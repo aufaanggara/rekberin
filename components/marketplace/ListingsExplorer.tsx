@@ -7,10 +7,6 @@ import {
   Filter,
   RotateCcw,
   X,
-  ShieldCheck,
-  CheckCircle2,
-  Trophy,
-  Flame,
   AlertCircle,
   Gamepad2,
   ArrowUpDown,
@@ -23,13 +19,81 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { RadioGroup, RadioItem } from "@/components/ui/RadioGroup";
 import { formatRupiah } from "@/lib/utils";
 
-// Game categories
 const GAME_TABS = [
   { id: "all", label: "Semua Game" },
   { id: "eFootball", label: "eFootball 2025" },
   { id: "Mobile Legends", label: "Mobile Legends" },
   { id: "FC Mobile", label: "FC Mobile" },
-];
+] as const;
+
+type GameId = (typeof GAME_TABS)[number]["id"];
+
+type FilterOption = { value: string; label: string };
+
+type GameFilterConfig = {
+  searchPlaceholder: string;
+  loginOptions: FilterOption[];
+  metric?: {
+    kind: "overall" | "league";
+    label: string;
+    options: FilterOption[];
+    rankOrder?: string[];
+  };
+};
+
+const GAME_FILTER_CONFIG: Record<GameId, GameFilterConfig> = {
+  all: {
+    searchPlaceholder: "Cari akun, pemain, seller, atau metode transaksi...",
+    loginOptions: [],
+  },
+  eFootball: {
+    searchPlaceholder: "Cari Messi, Neymar, OVR, Konami ID...",
+    loginOptions: [{ value: "Konami ID", label: "Konami ID" }],
+    metric: {
+      kind: "overall",
+      label: "Minimal OVR Squad",
+      options: [
+        { value: "90", label: "OVR 90+ (Full Legend/Meta)" },
+        { value: "85", label: "OVR 85+ (Divisi Tinggi)" },
+        { value: "80", label: "OVR 80+ (Kompetitif)" },
+      ],
+    },
+  },
+  "Mobile Legends": {
+    searchPlaceholder: "Cari hero, skin, rank, Moonton...",
+    loginOptions: [{ value: "Moonton", label: "Moonton" }],
+    metric: {
+      kind: "league",
+      label: "Rank Minimum",
+      options: [
+        { value: "Mythic", label: "Mythic" },
+        { value: "Legend", label: "Legend ke atas" },
+        { value: "Epic", label: "Epic ke atas" },
+      ],
+      rankOrder: ["Mythic", "Legend", "Epic", "Grandmaster", "Master", "Warrior"],
+    },
+  },
+  "FC Mobile": {
+    searchPlaceholder: "Cari pemain, OVR, EA Account...",
+    loginOptions: [{ value: "EA Account", label: "EA Account" }],
+    metric: {
+      kind: "overall",
+      label: "Minimal OVR Squad",
+      options: [
+        { value: "100", label: "OVR 100+" },
+        { value: "95", label: "OVR 95+" },
+        { value: "90", label: "OVR 90+" },
+      ],
+    },
+  },
+};
+
+function normalizeGame(value?: string): GameId {
+  const normalized = value?.trim().toLowerCase();
+  return (
+    GAME_TABS.find((tab) => tab.id.toLowerCase() === normalized)?.id ?? "all"
+  );
+}
 
 const SORT_OPTIONS = [
   { value: "latest", label: "Terbaru Ditambahkan" },
@@ -39,17 +103,25 @@ const SORT_OPTIONS = [
   { value: "rating_desc", label: "Rating Penjual" },
 ];
 
-export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: string }) {
+export function ListingsExplorer({
+  initialSearch = "",
+  initialGame = "all",
+}: {
+  initialSearch?: string;
+  initialGame?: string;
+}) {
   const { data: listings, isLoading, error, refetch } = useListings();
 
   // State
-  const [search, setSearch] = useState(initialSearch);
-  const [selectedGame, setSelectedGame] = useState("all");
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [appliedSearch, setAppliedSearch] = useState(initialSearch.trim());
+  const [selectedGame, setSelectedGame] = useState<GameId>(() => normalizeGame(initialGame));
   const [priceRange, setPriceRange] = useState<number[]>([50000, 3000000]);
   const [isNominusOnly, setIsNominusOnly] = useState(false);
   const [hasWarrantyOnly, setHasWarrantyOnly] = useState(false);
   const [selectedLoginMethod, setSelectedLoginMethod] = useState("all");
   const [minOvr, setMinOvr] = useState("all");
+  const [selectedLeague, setSelectedLeague] = useState("all");
   const [minRating, setMinRating] = useState("all");
   const [statusFilter, setStatusFilter] = useState("AVAILABLE");
   const [sortBy, setSortBy] = useState("latest");
@@ -60,6 +132,8 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
 
   // Filter logic
   const filteredListings = useMemo(() => {
+    const gameConfig = GAME_FILTER_CONFIG[selectedGame];
+
     return listings.filter((l) => {
       // 1. Game filter
       if (selectedGame !== "all" && l.game.toLowerCase() !== selectedGame.toLowerCase()) {
@@ -67,8 +141,8 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
       }
 
       // 2. Keyword search
-      if (search.trim()) {
-        const query = search.toLowerCase();
+      if (appliedSearch.trim()) {
+        const query = appliedSearch.toLowerCase();
         const inTitle = l.title.toLowerCase().includes(query);
         const inDesc = l.description.toLowerCase().includes(query);
         const inNotes = l.details.notes?.toLowerCase().includes(query);
@@ -104,14 +178,26 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
       }
 
       // 7. OVR
-      if (minOvr !== "all") {
+      if (gameConfig.metric?.kind === "overall" && minOvr !== "all") {
         const minVal = parseInt(minOvr, 10);
         if (l.details.overall < minVal) {
           return false;
         }
       }
 
-      // 8. Seller Rating
+      // 8. Mobile Legends rank
+      if (gameConfig.metric?.kind === "league" && selectedLeague !== "all") {
+        const rankOrder = gameConfig.metric.rankOrder ?? [];
+        const selectedRankIndex = rankOrder.indexOf(selectedLeague);
+        const listingRankIndex = rankOrder.findIndex(
+          (rank) => rank.toLowerCase() === l.details.league.toLowerCase()
+        );
+        if (selectedRankIndex === -1 || listingRankIndex === -1 || listingRankIndex > selectedRankIndex) {
+          return false;
+        }
+      }
+
+      // 9. Seller Rating
       if (minRating !== "all") {
         const minRat = parseFloat(minRating);
         if ((l.seller.rating ?? 0) < minRat) {
@@ -119,7 +205,7 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
         }
       }
 
-      // 9. Status
+      // 10. Status
       if (statusFilter !== "ALL" && l.status !== statusFilter) {
         return false;
       }
@@ -133,13 +219,14 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [
-    search,
+    appliedSearch,
     selectedGame,
     priceRange,
     isNominusOnly,
     hasWarrantyOnly,
     selectedLoginMethod,
     minOvr,
+    selectedLeague,
     minRating,
     statusFilter,
     sortBy,
@@ -148,13 +235,15 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
 
   // Reset helper
   const resetFilters = () => {
-    setSearch("");
+    setSearchInput("");
+    setAppliedSearch("");
     setSelectedGame("all");
     setPriceRange([50000, 3000000]);
     setIsNominusOnly(false);
     setHasWarrantyOnly(false);
     setSelectedLoginMethod("all");
     setMinOvr("all");
+    setSelectedLeague("all");
     setMinRating("all");
     setStatusFilter("AVAILABLE");
     setSortBy("latest");
@@ -162,179 +251,60 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
 
   // Count active specific filters
   const activeFilterCount = useMemo(() => {
+    const gameConfig = GAME_FILTER_CONFIG[selectedGame];
     let count = 0;
     if (selectedGame !== "all") count++;
     if (priceRange[0] !== 50000 || priceRange[1] !== 3000000) count++;
     if (isNominusOnly) count++;
     if (hasWarrantyOnly) count++;
     if (selectedLoginMethod !== "all") count++;
-    if (minOvr !== "all") count++;
+    if (gameConfig.metric?.kind === "overall" && minOvr !== "all") count++;
+    if (gameConfig.metric?.kind === "league" && selectedLeague !== "all") count++;
     if (minRating !== "all") count++;
     if (statusFilter !== "AVAILABLE") count++;
     return count;
-  }, [selectedGame, priceRange, isNominusOnly, hasWarrantyOnly, selectedLoginMethod, minOvr, minRating, statusFilter]);
+  }, [selectedGame, priceRange, isNominusOnly, hasWarrantyOnly, selectedLoginMethod, minOvr, selectedLeague, minRating, statusFilter]);
 
-  const hasActiveFilters = search !== "" || activeFilterCount > 0;
+  const hasActiveFilters = appliedSearch !== "" || activeFilterCount > 0;
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAppliedSearch(searchInput.trim());
+  };
+
+  const clearSearch = () => {
+    setSearchInput("");
+    setAppliedSearch("");
+  };
+
+  const handleGameChange = (game: GameId) => {
+    setSelectedGame(game);
+    setSelectedLoginMethod("all");
+    setMinOvr("all");
+    setSelectedLeague("all");
+  };
 
   // Reusable Filter Content (for both Desktop Sidebar & Mobile Sheet)
-  const renderFilterFields = () => (
-    <div className="space-y-6">
-      {/* Filter: Rentang Harga */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-            Budget / Harga
+  const renderFilterFields = (idPrefix: string) => {
+    const gameConfig = GAME_FILTER_CONFIG[selectedGame];
+
+    return (
+      <div className="space-y-6">
+        {/* Filter: Game */}
+        <div>
+          <label
+            htmlFor={`${idPrefix}-game`}
+            className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700"
+          >
+            Game
           </label>
-        </div>
-        <Slider
-          value={priceRange}
-          min={50000}
-          max={3000000}
-          step={50000}
-          onValueChange={setPriceRange}
-        />
-        <div className="flex justify-between text-xs text-slate-600 mt-2 font-semibold">
-          <span>{formatRupiah(priceRange[0])}</span>
-          <span>{formatRupiah(priceRange[1])}</span>
-        </div>
-
-        {/* Quick Price Buttons */}
-        <div className="grid grid-cols-2 gap-1.5 mt-3">
-          {[
-            { label: "< 200rb", range: [50000, 200000] },
-            { label: "200k - 500k", range: [200000, 500000] },
-            { label: "500k - 1.5M", range: [500000, 1500000] },
-            { label: "> 1.5 Juta", range: [1500000, 3000000] },
-          ].map((p) => (
-            <button
-              key={p.label}
-              onClick={() => setPriceRange(p.range)}
-              className={`text-[11px] py-1.5 px-2 rounded-lg font-medium border text-center transition-colors cursor-pointer ${
-                priceRange[0] === p.range[0] && priceRange[1] === p.range[1]
-                  ? "bg-blue-600 text-white border-blue-600 font-bold shadow-xs"
-                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Filter: Keamanan Akun & Tautan */}
-      <div className="pt-5 border-t border-slate-100">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2.5">
-          Keamanan Akun
-        </label>
-        <div className="space-y-2.5">
-          <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer font-medium hover:text-slate-900">
-            <Checkbox
-              checked={isNominusOnly}
-              onCheckedChange={(v) => setIsNominusOnly(v === true)}
-            />
-            <span>Hanya Nominus (Email Siap Ganti)</span>
-          </label>
-
-          <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer font-medium hover:text-slate-900">
-            <Checkbox
-              checked={hasWarrantyOnly}
-              onCheckedChange={(v) => setHasWarrantyOnly(v === true)}
-            />
-            <span>Garansi Anti-Hackback</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Filter: Tipe Login Akun */}
-      <div className="pt-5 border-t border-slate-100">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2.5">
-          Metode Login
-        </label>
-        <select
-          value={selectedLoginMethod}
-          onChange={(e) => setSelectedLoginMethod(e.target.value)}
-          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-        >
-          <option value="all">Semua Tipe Login</option>
-          <option value="Konami ID">Konami ID (Single Login)</option>
-          <option value="Moonton">Moonton (All Unbind)</option>
-          <option value="EA Account">EA Account / FC Mobile</option>
-        </select>
-      </div>
-
-      {/* Filter: Minimal OVR Squad */}
-      <div className="pt-5 border-t border-slate-100">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2.5">
-          Tingkat OVR Squad
-        </label>
-        <RadioGroup value={minOvr} onValueChange={setMinOvr} className="space-y-2">
-          {[
-            { value: "all", label: "Semua OVR" },
-            { value: "90", label: "OVR 90+ (Full Legend/Meta)" },
-            { value: "85", label: "OVR 85+ (Divisi Tinggi)" },
-            { value: "80", label: "OVR 80+ (Kompetitif)" },
-          ].map((item) => (
-            <label key={item.value} className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer font-medium hover:text-slate-900">
-              <RadioItem value={item.value} />
-              <span>{item.label}</span>
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
-
-      {/* Filter: Status Ketersediaan */}
-      <div className="pt-5 border-t border-slate-100">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2.5">
-          Status Listing
-        </label>
-        <RadioGroup value={statusFilter} onValueChange={setStatusFilter} className="space-y-2">
-          {[
-            { value: "AVAILABLE", label: "Tersedia Saja (Ready)" },
-            { value: "ALL", label: "Semua (Termasuk Terjual)" },
-          ].map((item) => (
-            <label key={item.value} className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer font-medium hover:text-slate-900">
-              <RadioItem value={item.value} />
-              <span>{item.label}</span>
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
-    </div>
-  );
-
-  return (
-    <div id="listings-section" className="relative pb-16 lg:pb-0">
-      {/* 1. Main Search & Game Filter Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 shadow-xs mb-5">
-        <div className="flex flex-col sm:flex-row items-stretch gap-2.5 mb-3 sm:mb-4">
-          {/* Search Input */}
-          <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
-            <Search size={18} className="text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari Messi, Chou, OVR, Konami ID..."
-              className="w-full bg-transparent text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-medium"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="text-slate-400 hover:text-slate-600 p-1"
-                title="Hapus kata kunci"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Game Dropdown */}
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 shrink-0">
-            <Gamepad2 size={16} className="text-blue-600 shrink-0" />
+          <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
+            <Gamepad2 size={16} className="shrink-0 text-blue-600" aria-hidden="true" />
             <select
+              id={`${idPrefix}-game`}
               value={selectedGame}
-              onChange={(e) => setSelectedGame(e.target.value)}
-              className="bg-transparent text-xs sm:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
+              onChange={(event) => handleGameChange(normalizeGame(event.target.value))}
+              className="w-full bg-transparent py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
             >
               {GAME_TABS.map((tab) => (
                 <option key={tab.id} value={tab.id}>
@@ -343,68 +313,222 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
               ))}
             </select>
           </div>
+          {selectedGame === "all" && (
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              Pilihan di bawah hanya menampilkan filter yang berlaku untuk semua game.
+            </p>
+          )}
         </div>
 
-        {/* Quick Filter Chips — Horizontally Scrollable on Mobile for sleek native app feel */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1 flex-nowrap -mx-1 px-1 text-xs">
-          <span className="font-semibold text-slate-400 flex items-center gap-1 text-[10px] uppercase tracking-wider shrink-0">
-            <Flame size={12} className="text-amber-500" /> Filter Cepat:
+        {/* Filter: Rentang Harga */}
+        <div className="border-t border-slate-100 pt-5">
+          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Budget / Harga
+          </label>
+          <Slider
+            value={priceRange}
+            min={50000}
+            max={3000000}
+            step={50000}
+            onValueChange={setPriceRange}
+          />
+          <div className="mt-2 flex justify-between text-xs font-semibold text-slate-600">
+            <span>{formatRupiah(priceRange[0])}</span>
+            <span>{formatRupiah(priceRange[1])}</span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-1.5">
+            {[
+              { label: "< 200rb", range: [50000, 200000] },
+              { label: "200k - 500k", range: [200000, 500000] },
+              { label: "500k - 1.5M", range: [500000, 1500000] },
+              { label: "> 1.5 Juta", range: [1500000, 3000000] },
+            ].map((pricePreset) => (
+              <button
+                key={pricePreset.label}
+                type="button"
+                onClick={() => setPriceRange(pricePreset.range)}
+                className={`min-h-11 rounded-lg border px-2 py-1.5 text-center text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  priceRange[0] === pricePreset.range[0] && priceRange[1] === pricePreset.range[1]
+                    ? "border-blue-600 bg-blue-600 font-bold text-white shadow-xs"
+                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {pricePreset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Filter: Keamanan Akun */}
+        <div className="border-t border-slate-100 pt-5">
+          <span className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Keamanan Akun
           </span>
+          <div className="space-y-1">
+            <label className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+              <Checkbox
+                checked={isNominusOnly}
+                onCheckedChange={(value) => setIsNominusOnly(value === true)}
+              />
+              <span>Hanya Nominus (Email Siap Ganti)</span>
+            </label>
 
-          <button
-            onClick={() => setIsNominusOnly(!isNominusOnly)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
-              isNominusOnly
-                ? "bg-emerald-600 text-white shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <CheckCircle2 size={13} />
-            Nominus
-          </button>
+            <label className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+              <Checkbox
+                checked={hasWarrantyOnly}
+                onCheckedChange={(value) => setHasWarrantyOnly(value === true)}
+              />
+              <span>Garansi Anti-Hackback</span>
+            </label>
+          </div>
+        </div>
 
-          <button
-            onClick={() => setHasWarrantyOnly(!hasWarrantyOnly)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
-              hasWarrantyOnly
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <ShieldCheck size={13} />
-            Garansi Hackback
-          </button>
+        {/* Game-specific filters */}
+        {selectedGame !== "all" && (
+          <>
+            <div className="border-t border-slate-100 pt-5">
+              <label
+                htmlFor={`${idPrefix}-login`}
+                className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700"
+              >
+                Metode Login {selectedGame}
+              </label>
+              <select
+                id={`${idPrefix}-login`}
+                value={selectedLoginMethod}
+                onChange={(event) => setSelectedLoginMethod(event.target.value)}
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+              >
+                <option value="all">Semua Metode Login</option>
+                {gameConfig.loginOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            onClick={() => setMinOvr(minOvr === "90" ? "all" : "90")}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
-              minOvr === "90"
-                ? "bg-amber-500 text-slate-950 font-bold shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            }`}
-          >
-            <Trophy size={13} />
-            OVR 90+
-          </button>
+            {gameConfig.metric?.kind === "overall" && (
+              <div className="border-t border-slate-100 pt-5">
+                <span className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {gameConfig.metric.label}
+                </span>
+                <RadioGroup value={minOvr} onValueChange={setMinOvr} className="space-y-1">
+                  <label className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                    <RadioItem value="all" />
+                    <span>Semua OVR</span>
+                  </label>
+                  {gameConfig.metric.options.map((option) => (
+                    <label key={option.value} className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                      <RadioItem value={option.value} />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
 
-          <button
-            onClick={() => {
-              if (priceRange[1] === 350000) {
-                setPriceRange([50000, 3000000]);
-              } else {
-                setPriceRange([50000, 350000]);
-              }
-            }}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              priceRange[1] === 350000
-                ? "bg-purple-600 text-white shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-            }`}
-          >
-            Budget &lt; 350k
-          </button>
+            {gameConfig.metric?.kind === "league" && (
+              <div className="border-t border-slate-100 pt-5">
+                <span className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  {gameConfig.metric.label}
+                </span>
+                <RadioGroup value={selectedLeague} onValueChange={setSelectedLeague} className="space-y-1">
+                  <label className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                    <RadioItem value="all" />
+                    <span>Semua Rank</span>
+                  </label>
+                  {gameConfig.metric.options.map((option) => (
+                    <label key={option.value} className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                      <RadioItem value={option.value} />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Common filter: Seller Rating */}
+        <div className="border-t border-slate-100 pt-5">
+          <span className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Rating Penjual
+          </span>
+          <RadioGroup value={minRating} onValueChange={setMinRating} className="space-y-1">
+            {[
+              { value: "all", label: "Semua Rating" },
+              { value: "4.5", label: "4.5 ke atas" },
+              { value: "4", label: "4.0 ke atas" },
+            ].map((option) => (
+              <label key={option.value} className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                <RadioItem value={option.value} />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </RadioGroup>
+        </div>
+
+        {/* Common filter: Status */}
+        <div className="border-t border-slate-100 pt-5">
+          <span className="mb-2.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+            Status Listing
+          </span>
+          <RadioGroup value={statusFilter} onValueChange={setStatusFilter} className="space-y-1">
+            {[
+              { value: "AVAILABLE", label: "Tersedia Saja (Ready)" },
+              { value: "ALL", label: "Semua (Termasuk Terjual)" },
+            ].map((option) => (
+              <label key={option.value} className="flex min-h-11 items-center gap-2.5 text-xs font-medium text-slate-700 cursor-pointer hover:text-slate-900">
+                <RadioItem value={option.value} />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </RadioGroup>
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div id="listings-section" className="relative pb-16 lg:pb-0">
+      {/* 1. Main Search Bar */}
+      <form
+        onSubmit={handleSearchSubmit}
+        className="mb-5 flex flex-col items-stretch gap-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs sm:flex-row sm:p-4"
+      >
+        <div className="flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-all focus-within:border-blue-500 focus-within:bg-white">
+          <Search size={18} className="shrink-0 text-slate-400" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder={GAME_FILTER_CONFIG[selectedGame].searchPlaceholder}
+            aria-label="Cari akun"
+            className="w-full bg-transparent text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none sm:text-sm"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="min-h-8 min-w-8 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              title="Hapus kata kunci"
+              aria-label="Hapus kata kunci"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <Search size={16} aria-hidden="true" />
+          Cari
+        </button>
+      </form>
 
       {/* 2. Main Layout: Desktop Sidebar & Listings Grid */}
       <div className="grid lg:grid-cols-[270px_1fr] gap-8 items-start">
@@ -425,7 +549,7 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
             )}
           </div>
 
-          {renderFilterFields()}
+          {renderFilterFields("desktop-filter")}
         </aside>
 
         {/* Right Content: Sort Toolbar, Active Filter Chips, Listings Grid */}
@@ -460,10 +584,10 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
             <div className="flex items-center gap-1.5 flex-wrap mb-4 text-xs">
               <span className="text-slate-400 text-[11px] font-medium">Aktif:</span>
 
-              {search && (
+              {appliedSearch && (
                 <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-medium text-[11px]">
-                  &quot;{search}&quot;
-                  <button onClick={() => setSearch("")} className="hover:text-blue-900">
+                  &quot;{appliedSearch}&quot;
+                  <button type="button" onClick={clearSearch} className="hover:text-blue-900">
                     <X size={12} />
                   </button>
                 </span>
@@ -472,7 +596,7 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
               {selectedGame !== "all" && (
                 <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 font-medium text-[11px]">
                   {selectedGame}
-                  <button onClick={() => setSelectedGame("all")} className="hover:text-blue-900">
+                  <button type="button" onClick={() => handleGameChange("all")} className="hover:text-blue-900">
                     <X size={12} />
                   </button>
                 </span>
@@ -496,19 +620,28 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
                 </span>
               )}
 
-              {minOvr !== "all" && (
+              {GAME_FILTER_CONFIG[selectedGame].metric?.kind === "overall" && minOvr !== "all" && (
                 <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200 font-medium text-[11px]">
                   OVR {minOvr}+
-                  <button onClick={() => setMinOvr("all")} className="hover:text-amber-950">
+                  <button type="button" onClick={() => setMinOvr("all")} className="hover:text-amber-950">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
-              {selectedLoginMethod !== "all" && (
+              {GAME_FILTER_CONFIG[selectedGame].metric?.kind === "league" && selectedLeague !== "all" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                  Rank {selectedLeague}+
+                  <button type="button" onClick={() => setSelectedLeague("all")} className="hover:text-violet-900">
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {selectedGame !== "all" && selectedLoginMethod !== "all" && (
                 <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200 font-medium text-[11px]">
                   {selectedLoginMethod}
-                  <button onClick={() => setSelectedLoginMethod("all")} className="hover:text-slate-900">
+                  <button type="button" onClick={() => setSelectedLoginMethod("all")} className="hover:text-slate-900">
                     <X size={12} />
                   </button>
                 </span>
@@ -517,7 +650,25 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
               {(priceRange[0] !== 50000 || priceRange[1] !== 3000000) && (
                 <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200 font-medium text-[11px]">
                   {formatRupiah(priceRange[0])} - {formatRupiah(priceRange[1])}
-                  <button onClick={() => setPriceRange([50000, 3000000])} className="hover:text-slate-900">
+                  <button type="button" onClick={() => setPriceRange([50000, 3000000])} className="hover:text-slate-900">
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {minRating !== "all" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  Rating {minRating}+
+                  <button type="button" onClick={() => setMinRating("all")} className="hover:text-slate-900">
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {statusFilter !== "AVAILABLE" && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  Semua status
+                  <button type="button" onClick={() => setStatusFilter("AVAILABLE")} className="hover:text-slate-900">
                     <X size={12} />
                   </button>
                 </span>
@@ -592,8 +743,9 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
       <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40 flex items-center gap-2 p-2 rounded-2xl bg-slate-900/90 text-white backdrop-blur-lg border border-white/15 shadow-2xl">
         {/* Mobile Filter Button */}
         <button
+          type="button"
           onClick={() => setIsMobileFilterOpen(true)}
-          className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 font-bold text-xs text-white flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+          className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
         >
           <SlidersHorizontal size={15} />
           <span>Filter</span>
@@ -606,8 +758,9 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
 
         {/* Mobile Quick Sort Button */}
         <button
+          type="button"
           onClick={() => setIsMobileSortOpen(true)}
-          className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-all active:scale-95 cursor-pointer"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
         >
           <ArrowUpDown size={14} />
           <span>Urutkan</span>
@@ -638,16 +791,19 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
               </div>
               <div className="flex items-center gap-3">
                 {hasActiveFilters && (
-                  <button
-                    onClick={resetFilters}
+                <button
+                  type="button"
+                  onClick={resetFilters}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800"
                   >
                     Reset
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => setIsMobileFilterOpen(false)}
-                  className="p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="min-h-11 min-w-11 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Tutup filter"
                 >
                   <X size={20} />
                 </button>
@@ -656,14 +812,15 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
 
             {/* Modal Body (Scrollable) */}
             <div className="p-5 overflow-y-auto flex-1 space-y-6">
-              {renderFilterFields()}
+              {renderFilterFields("mobile-filter")}
             </div>
 
             {/* Modal Footer (Sticky Button) */}
             <div className="p-4 bg-white border-t border-slate-100 shrink-0">
               <button
+                type="button"
                 onClick={() => setIsMobileFilterOpen(false)}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-extrabold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-700 active:scale-98 cursor-pointer"
               >
                 TAMPILKAN {filteredListings.length} AKUN
               </button>
@@ -688,8 +845,10 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
                 <ArrowUpDown size={18} className="text-blue-600" /> Urutkan Akun
               </h3>
               <button
+                type="button"
                 onClick={() => setIsMobileSortOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
+                className="min-h-11 min-w-11 rounded-full p-2 text-slate-400 hover:bg-slate-100"
+                aria-label="Tutup pengurutan"
               >
                 <X size={20} />
               </button>
@@ -698,12 +857,13 @@ export function ListingsExplorer({ initialSearch = "" }: { initialSearch?: strin
             <div className="p-4 space-y-1">
               {SORT_OPTIONS.map((opt) => (
                 <button
+                  type="button"
                   key={opt.value}
                   onClick={() => {
                     setSortBy(opt.value);
                     setIsMobileSortOpen(false);
                   }}
-                  className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                  className={`flex min-h-11 w-full items-center justify-between rounded-xl px-4 py-3 text-xs font-bold transition-colors cursor-pointer ${
                     sortBy === opt.value
                       ? "bg-blue-50 text-blue-700 border border-blue-200"
                       : "hover:bg-slate-50 text-slate-700"

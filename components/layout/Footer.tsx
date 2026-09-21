@@ -48,17 +48,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm text-slate-600">
               <li>
                 <Link href="/listings" className="hover:text-blue-600 transition-colors">
-                  Cari Akun eFootball
-                </Link>
-              </li>
-              <li>
-                <Link href="/rekber" className="hover:text-blue-600 transition-colors">
-                  Daftar Admin Rekber
-                </Link>
-              </li>
-              <li>
-                <Link href="/#kalkulator-fee" className="hover:text-blue-600 transition-colors">
-                  Hitung Estimasi Fee
+                  List Akun Game
                 </Link>
               </li>
               <li>
@@ -77,17 +67,7 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm text-slate-600">
               <li>
                 <Link href="/listings/new" className="hover:text-blue-600 transition-colors">
-                  Pasang Iklan Akun
-                </Link>
-              </li>
-              <li>
-                <Link href="/rekber" className="hover:text-blue-600 transition-colors">
-                  Gabung Jadi Admin
-                </Link>
-              </li>
-              <li>
-                <Link href="/rekber/syarat" className="hover:text-blue-600 transition-colors">
-                  Syarat Verifikasi KYC
+                  Post Akun Game
                 </Link>
               </li>
               <li>

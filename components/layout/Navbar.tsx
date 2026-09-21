@@ -7,8 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const links = [
   { href: "/", label: "Beranda" },
-  { href: "/listings", label: "Cari Akun" },
-  { href: "/rekber", label: "Admin Rekber" },
+  { href: "/listings", label: "List Akun" },
   { href: "/tentang-kami", label: "Tentang Kami" },
 ];
 
@@ -124,7 +123,7 @@ export function Navbar() {
               className="gap-1.5 text-xs text-slate-700 hover:text-blue-600 border-slate-300"
             >
               <PlusCircle size={15} className="text-blue-600" />
-              Pasang Iklan
+              Post Akun
             </Button>
           </Link>
         </div>
@@ -185,7 +184,7 @@ export function Navbar() {
                 size="md"
                 className="w-full gap-2 justify-center border-blue-600 text-blue-600 bg-blue-50/50"
               >
-                <PlusCircle size={16} /> Pasang Iklan Akun
+                <PlusCircle size={16} /> Post Akun
               </Button>
             </Link>
             {!isLoading && (isAuthenticated ? (

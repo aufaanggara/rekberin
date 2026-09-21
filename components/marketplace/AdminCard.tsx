@@ -1,9 +1,7 @@
 "use client";
-import Link from "next/link";
-import { MessageCircle, Clock, CheckCircle2, ShieldCheck, Zap, CreditCard, Star } from "lucide-react";
+import { MessageCircle, ShieldCheck } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { CrownBadge } from "@/components/ui/CrownBadge";
 import { TrustScoreRing } from "@/components/marketplace/TrustScoreRing";
 import { formatRupiah, waLink } from "@/lib/utils";
 import type { AdminProfile } from "@/types";
@@ -99,17 +97,10 @@ export function AdminCard({ admin, rank }: { admin: AdminProfile; rank?: number 
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <Link href={`/rekber/${admin.user.username}`} className="w-full">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full text-xs"
-            >
-              Lihat Profil
-            </Button>
-          </Link>
-
+        <div className="grid grid-cols-1 gap-2">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center text-[11px] font-semibold text-slate-600">
+            Admin dipilih saat checkout
+          </div>
           <a
             href={waLink(admin.user.whatsapp ?? "")}
             target="_blank"

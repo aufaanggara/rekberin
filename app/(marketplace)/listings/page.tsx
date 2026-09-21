@@ -14,6 +14,7 @@ export default function ListingsPage({
   searchParams?: { q?: string; game?: string; maxPrice?: string };
 }) {
   const initialQuery = searchParams?.q || "";
+  const initialGame = searchParams?.game || "all";
 
   return (
     <div className="bg-slate-50 min-h-screen py-8">
@@ -38,7 +39,7 @@ export default function ListingsPage({
         </div>
 
         {/* Live Interactive Explorer */}
-        <ListingsExplorer initialSearch={initialQuery} />
+        <ListingsExplorer initialSearch={initialQuery} initialGame={initialGame} />
       </div>
     </div>
   );

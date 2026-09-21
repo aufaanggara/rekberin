@@ -7,6 +7,10 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
+import {
+  getTransactionBuyerTotal,
+  TransactionFeeSummary,
+} from "@/components/dashboard/TransactionFeeSummary";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRupiah } from "@/lib/utils";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
@@ -14,7 +18,7 @@ import type { TransactionViewModel } from "@/types/transaction-view-model";
 export function BuyerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
   const tx = initialTransaction;
 
-  const totalPayment = tx.price + tx.platformFee + tx.adminFee;
+  const totalPayment = getTransactionBuyerTotal(tx);
   const isPendingPayment = tx.status === "PENDING_PAYMENT";
 
   return (
@@ -61,31 +65,17 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Card 1: Rincian Tagihan */}
           <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Rincian Pembayaran</h3>
-            <div className="space-y-3 text-sm">
+            <div className="space-y-4 text-sm">
               <div>
                 <p className="text-txt-muted text-xs mb-0.5">Item Akun</p>
                 <p className="font-medium text-slate-900 line-clamp-2">{tx.listing.title}</p>
               </div>
 
-              <div className="border-t border-slate-100 pt-3 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-txt-muted">Harga Akun</span>
-                  <span className="font-medium">{formatRupiah(tx.price)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-txt-muted">Biaya Platform</span>
-                  <span className="font-medium">{formatRupiah(tx.platformFee)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-txt-muted">Biaya Escrow Rekber</span>
-                  <span className="font-medium">{formatRupiah(tx.adminFee)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-blue-600 border-t border-slate-100 pt-2">
-                  <span>Total Tagihan</span>
-                  <span>{formatRupiah(totalPayment)}</span>
-                </div>
-              </div>
+              <TransactionFeeSummary
+                price={tx.price}
+                platformFee={tx.platformFee}
+                adminFee={tx.adminFee}
+              />
 
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-600 flex items-start gap-2 mt-4" role="status">
                 <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />

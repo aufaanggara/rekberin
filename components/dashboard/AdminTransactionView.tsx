@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
 import { Avatar } from "@/components/ui/Avatar";
-import { formatRupiah } from "@/lib/utils";
+import { TransactionFeeSummary } from "@/components/dashboard/TransactionFeeSummary";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
 
 export function AdminTransactionView({
@@ -48,20 +48,11 @@ export function AdminTransactionView({
                 <p className="font-medium text-slate-900">{tx.listing.title}</p>
                 <p className="text-txt-secondary text-xs">{tx.listing.game}</p>
               </div>
-              <div className="border-t border-slate-100 pt-3 space-y-2 text-xs">
-                <div className="flex justify-between gap-3">
-                  <span className="text-txt-muted">Harga akun</span>
-                  <span className="font-semibold">{formatRupiah(tx.price)}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-txt-muted">Fee platform</span>
-                  <span>{formatRupiah(tx.platformFee)}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-txt-muted">Fee admin</span>
-                  <span>{formatRupiah(tx.adminFee)}</span>
-                </div>
-              </div>
+              <TransactionFeeSummary
+                price={tx.price}
+                platformFee={tx.platformFee}
+                adminFee={tx.adminFee}
+              />
             </div>
           </Card>
 
