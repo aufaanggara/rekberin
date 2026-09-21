@@ -1340,7 +1340,7 @@ build_status: passed (0 errors)
 |---|---|---|---|
 | DEV-05 Database | ✅ Completed | `bagas/DatabasePreparation` | Merged to main |
 | DEV-06 Auth & Role | 🔲 Not started | - | Assigned: Bagas |
-| DEV-07 Listing Management | 🔲 Not started | - | Assigned: Bagas |
+| DEV-07 Listing Management | ✅ Done | - | Assigned: Bagas |
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-02 QRIS/Payment | 🔲 Not started | - | Assigned: Ibrahim |
