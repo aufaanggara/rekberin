@@ -30,14 +30,28 @@ const createListingSchema: z.ZodType<CreateListingRequest> = z.object({
   title: z.string().trim().min(5).max(160),
   game: z.string().trim().min(1).max(80),
   price: z.number().int().positive().max(2_000_000_000),
-  description: z.string().trim().min(10).max(5000),
+  description: z.string().trim().max(5000),
   details: listingDetailsSchema,
   images: z.array(z.string().min(1).max(5_000_000)).max(8),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const mine = searchParams.get("mine") === "true";
+
+    let whereClause: Prisma.ListingWhereInput = {};
+
+    if (mine) {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json({ error: "Login diperlukan." }, { status: 401 });
+      }
+      whereClause = { sellerId: user.id };
+    }
+
     const listings = await prisma.listing.findMany({
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       include: listingInclude,
     });
@@ -76,8 +90,10 @@ export async function POST(request: Request) {
 
   const parsed = createListingSchema.safeParse(body);
   if (!parsed.success) {
+    const errorMessages = parsed.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+    console.error("ZOD VALIDATION FAILED:", errorMessages);
     return NextResponse.json(
-      { error: "Data listing belum lengkap atau tidak valid." },
+      { error: `Data tidak valid: ${errorMessages}` },
       { status: 400 }
     );
   }

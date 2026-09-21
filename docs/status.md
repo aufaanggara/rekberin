@@ -8,7 +8,7 @@ Status berikut disusun dari source code branch yang sedang digunakan, bukan dari
 |---|---|---|
 | DEV-05 Database | Selesai sebagai fondasi | `prisma/schema.prisma`, migration, `prisma/seed.ts` |
 | DEV-06 Auth dan role | Sebagian besar tersedia | `lib/auth.ts`, auth routes, `middleware.ts`, auth E2E |
-| DEV-07 Listing management | Create/read tersedia; edit/deactivate belum ada | `app/api/listings/`, `CreateListingForm.tsx` |
+| DEV-07 Listing management | ✅ Selesai (Create, read, edit, deactivate) | `app/api/listings/`, `CreateListingForm.tsx` |
 | DEV-08 Marketplace integration | Listing marketplace memakai API; direktori admin belum | `useListings.ts`, `ListingsExplorer.tsx`, `/rekber` |
 | DEV-01 Transaction flow | Create/read tersedia | `lib/transactions.ts`, transaction routes, transaction E2E |
 | DEV-02 QRIS/payment | Belum terhubung | `PaymentModal.tsx` masih `useStore`/simulasi; tidak ada payment route/model |

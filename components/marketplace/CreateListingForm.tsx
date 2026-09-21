@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   UploadCloud,
   X,
@@ -14,9 +13,11 @@ import {
   Image as ImageIcon,
   Star,
   Eye,
+  Pencil,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
-import type { CreateListingRequest } from "@/types/listing-api";
+import type { CreateListingRequest, ListingApiResponse } from "@/types/listing-api";
+import type { ListingDetailsApi } from "@/types/listing-api";
 import { parseListingDetailResponse } from "@/lib/listing-api-client";
 import {
   getApiErrorMessage,
@@ -42,36 +43,56 @@ const sampleScreenshots = [
   { label: "Koin & GP", url: "/screenshots/efootball_rich.jpg" },
 ];
 
-export function CreateListingForm() {
+// ── Props ──────────────────────────────────────────────────────────────
+
+export interface ListingFormProps {
+  /** If provided, the form operates in edit mode and prefills values */
+  editData?: {
+    id: string;
+    title: string;
+    game: string;
+    price: number;
+    description: string;
+    details: ListingDetailsApi;
+    images: string[];
+  };
+}
+
+export function CreateListingForm({ editData }: ListingFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isEditMode = Boolean(editData);
 
-  // Form State
-  const [game, setGame] = useState("eFootball");
-  const [title, setTitle] = useState("");
-  const [price, setPrice] = useState<number | "">("");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  // Form State — prefill from editData when in edit mode
+  const [game, setGame] = useState(editData?.game ?? "eFootball");
+  const [title, setTitle] = useState(editData?.title ?? "");
+  const [price, setPrice] = useState<number | "">(editData?.price ?? "");
+  const [description, setDescription] = useState(editData?.description ?? "");
+  const [images, setImages] = useState<string[]>(editData?.images ?? []);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Specs
-  const [overall, setOverall] = useState<number | "">(85);
-  const [league, setLeague] = useState("Diamond");
-  const [coins, setCoins] = useState<number | "">(100000);
-  const [gp, setGp] = useState<number | "">(500000);
-  const [loginMethod, setLoginMethod] = useState("Konami ID");
-  const [isNominus, setIsNominus] = useState(true);
-  const [hasWarranty, setHasWarranty] = useState(true);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>(["Vinicius Jr", "Mbappe"]);
+  // Specs — prefill from editData.details
+  const details = editData?.details;
+  const [overall, setOverall] = useState<number | "">(details?.overall ?? 85);
+  const [league, setLeague] = useState(details?.league ?? "Diamond");
+  const [coins, setCoins] = useState<number | "">(details?.coins ?? 100000);
+  const [gp, setGp] = useState<number | "">(details?.gp ?? 500000);
+  const [loginMethod, setLoginMethod] = useState(details?.loginMethod ?? "Konami ID");
+  const [isNominus, setIsNominus] = useState(details?.isNominus ?? true);
+  const [hasWarranty, setHasWarranty] = useState(details?.hasWarranty ?? true);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>(
+    details?.players?.length ? details.players : ["Vinicius Jr", "Mbappe"]
+  );
   const [customPlayerInput, setCustomPlayerInput] = useState("");
-  const [notes, setNotes] = useState("Email single login, siap bantu ganti email pembeli sampai tuntas.");
+  const [notes, setNotes] = useState(
+    details?.notes ?? "Email single login, siap bantu ganti email pembeli sampai tuntas."
+  );
 
   const [loading, setLoading] = useState(false);
 
   // Handle Multi Image Upload
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const newImgs: string[] = [];
 
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith("image/")) return;
@@ -130,7 +151,7 @@ export function CreateListingForm() {
 
     setLoading(true);
 
-    const request: CreateListingRequest = {
+    const requestBody: CreateListingRequest = {
       title,
       game,
       price: Number(price),
@@ -152,30 +173,43 @@ export function CreateListingForm() {
     };
 
     try {
-      const response = await fetch("/api/listings", {
-        method: "POST",
+      const url = isEditMode
+        ? `/api/listings/${encodeURIComponent(editData!.id)}`
+        : "/api/listings";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
+        body: JSON.stringify(requestBody),
       });
       const payload = await readJsonResponse(response);
 
       if (!response.ok) {
         if (response.status === 401) {
           toast.error("Silakan login sebelum membuat listing.");
-          router.push(`/login?callbackUrl=${encodeURIComponent("/listings/new")}`);
+          router.push(`/login?callbackUrl=${encodeURIComponent(isEditMode ? `/listings/${editData!.id}/edit` : "/listings/new")}`);
           return;
         }
-        throw new Error(getApiErrorMessage(payload, "Listing tidak dapat dibuat."));
+        if (response.status === 403) {
+          toast.error("Anda tidak memiliki izin untuk mengedit listing ini.");
+          return;
+        }
+        throw new Error(getApiErrorMessage(payload, "Listing tidak dapat disimpan."));
       }
 
       const result = parseListingDetailResponse(payload);
-      toast.success("Post akun berhasil diterbitkan ke katalog!");
+      toast.success(
+        isEditMode
+          ? "Perubahan listing berhasil disimpan!"
+          : "Iklan akun berhasil diterbitkan ke katalog!"
+      );
       router.push(`/listings/${result.listing.id}`);
     } catch (requestError) {
       toast.error(
         requestError instanceof Error
           ? requestError.message
-          : "Listing tidak dapat dibuat."
+          : "Listing tidak dapat disimpan."
       );
     } finally {
       setLoading(false);
@@ -472,10 +506,11 @@ export function CreateListingForm() {
           className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
         >
           {loading ? (
-            "Menerbitkan Post Akun..."
+            isEditMode ? "Menyimpan Perubahan..." : "Menerbitkan Iklan Akun..."
           ) : (
             <>
-              <CheckCircle2 size={18} /> Publikasikan Post ke Marketplace
+              {isEditMode ? <Pencil size={18} /> : <CheckCircle2 size={18} />}
+              {isEditMode ? "Simpan Perubahan Listing" : "Publikasikan Iklan ke Marketplace"}
             </>
           )}
         </button>
