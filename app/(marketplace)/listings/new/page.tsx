@@ -14,7 +14,7 @@ export default function NewListingPublicPage() {
             <ArrowLeft size={14} /> Kembali ke Katalog
           </Link>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Pasang Iklan Jual Akun Game
+            Post Akun Game
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
             Isi spesifikasi akunmu dan unggah screenshot untuk mulai menjual dengan aman via Rekberin.

@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { dummyAdmins } from "@/data/dummy";
 import { AdminCard } from "@/components/marketplace/AdminCard";
-import { Trophy, ArrowRight } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 export function TopAdmins() {
   const top = [...dummyAdmins].sort((a, b) => b.trustScore - a.trustScore).slice(0, 3);
@@ -22,13 +21,9 @@ export function TopAdmins() {
             </p>
           </div>
 
-          <Link
-            href="/rekber"
-            className="inline-flex items-center gap-1.5 text-blue-600 text-sm font-semibold hover:text-blue-700 transition-colors group self-start sm:self-auto"
-          >
-            <span>Lihat Semua Admin ({dummyAdmins.length})</span>
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+          <span className="self-start text-xs font-semibold text-slate-500 sm:self-auto">
+            {dummyAdmins.length} admin tersedia saat checkout
+          </span>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">

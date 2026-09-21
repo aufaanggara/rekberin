@@ -17,7 +17,7 @@ export function ShareListingButton({ title, price }: ShareListingButtonProps) {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      toast.success("Link iklan berhasil disalin ke clipboard!");
+      toast.success("Link post akun berhasil disalin ke clipboard!");
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -34,7 +34,7 @@ export function ShareListingButton({ title, price }: ShareListingButtonProps) {
     <div className="bg-slate-50 rounded-2xl border border-slate-200/80 p-3.5 space-y-2">
       <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
         <Share2 size={13} className="text-blue-600" />
-        <span>Bagikan Iklan Akun Ini:</span>
+        <span>Bagikan Post Akun Ini:</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

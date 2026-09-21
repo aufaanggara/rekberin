@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
 import { Avatar } from "@/components/ui/Avatar";
-import { formatRupiah } from "@/lib/utils";
+import { TransactionFeeSummary } from "@/components/dashboard/TransactionFeeSummary";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
 
 export function SellerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
@@ -41,27 +41,17 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Card 1: Penerimaan Dana */}
           <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Pencairan Dana Penjual</h3>
-            <div className="space-y-3 text-sm">
+            <div className="space-y-4 text-sm">
               <div>
                 <p className="text-txt-muted text-xs mb-0.5">Item Akun Terjual</p>
                 <p className="font-medium text-slate-900 line-clamp-2">{tx.listing.title}</p>
               </div>
 
-              <div className="border-t border-slate-100 pt-3 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-txt-muted">Harga Jual</span>
-                  <span className="font-medium">{formatRupiah(tx.price)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-txt-muted">Potongan Rekber</span>
-                    <span className="font-medium text-emerald-600">Mengikuti data transaksi</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-emerald-600 border-t border-slate-100 pt-2">
-                  <span>Dana yang Diterima</span>
-                  <span>{formatRupiah(tx.price)}</span>
-                </div>
-              </div>
+              <TransactionFeeSummary
+                price={tx.price}
+                platformFee={tx.platformFee}
+                adminFee={tx.adminFee}
+              />
 
               <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/70 text-xs text-amber-900 flex items-start gap-2 mt-4">
                 <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />

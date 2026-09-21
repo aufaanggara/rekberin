@@ -730,8 +730,8 @@ function UserDashboardContent() {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                   <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900">Kelola Katalog Iklan Saya</h2>
-                      <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan iklan sementara.</p>
+                      <h2 className="text-lg font-bold text-slate-900">Kelola Katalog Post Akun Saya</h2>
+                      <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan post akun sementara.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
@@ -746,14 +746,14 @@ function UserDashboardContent() {
                       </div>
                       <Link href="/listings/new">
                         <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
-                          <PlusCircle size={13} className="mr-1" /> Iklan Baru
+                          <PlusCircle size={13} className="mr-1" /> Post Akun Baru
                         </Button>
                       </Link>
                     </div>
                   </div>
                   <div className="p-4 sm:p-6">
                     {filteredSellerListings.length === 0 ? (
-                      <div className="text-center py-12 text-slate-400 text-xs">Tidak ada iklan pada kategori ini.</div>
+                      <div className="text-center py-12 text-slate-400 text-xs">Tidak ada post akun pada kategori ini.</div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {filteredSellerListings.map((l) => {
@@ -831,7 +831,7 @@ function UserDashboardContent() {
                                       : <><Share2 size={13} className="mr-1" /> Bagikan</>}
                                   </Button>
                                   <Link href={`/listings/${l.id}`} className="flex-1">
-                                    <Button variant="secondary" size="sm" className="text-xs w-full">Lihat Iklan</Button>
+                                    <Button variant="secondary" size="sm" className="text-xs w-full">Lihat Post Akun</Button>
                                   </Link>
                                 </div>
                               </div>
@@ -1447,7 +1447,7 @@ function UserDashboardContent() {
                   <select className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white">
                     <option>Akun di-hackback / password berubah tiba-tiba</option>
                     <option>Email pertama tidak bisa diganti</option>
-                    <option>Spesifikasi pemain tidak sesuai deskripsi iklan</option>
+                    <option>Spesifikasi pemain tidak sesuai deskripsi post akun</option>
                     <option>Akun terkena sanksi suspend / banned</option>
                   </select>
                 </div>
@@ -1596,7 +1596,7 @@ function UserDashboardContent() {
                       <strong className="text-slate-800">Hackback / Pemulihan Akun:</strong> Akun di-recover atau password diubah paksa oleh penjual/pemilik pertama dalam masa 48 jam.
                     </li>
                     <li>
-                      <strong className="text-slate-800">Spesifikasi Tidak Sesuai:</strong> Item, squad, atau level game berbeda fatal dengan apa yang diiklankan di listing.
+                      <strong className="text-slate-800">Spesifikasi Tidak Sesuai:</strong> Item, squad, atau level game berbeda fatal dengan apa yang ditulis di post akun.
                     </li>
                     <li>
                       <strong className="text-slate-800">Sanksi Banned Sebelumnya:</strong> Akun terkena suspend akibat pelanggaran yang dilakukan penjual sebelum transaksi.

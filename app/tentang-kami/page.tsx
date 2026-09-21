@@ -1,6 +1,5 @@
 import { HowItWorks } from "@/components/landing/HowItWorks";
-import { FeeCalculator } from "@/components/landing/FeeCalculator";
-import { TopAdmins } from "@/components/landing/TopAdmins";
+// import { TopAdmins } from "@/components/landing/TopAdmins";
 import { TrustSafety } from "@/components/landing/TrustStats";
 import { FAQ } from "@/components/landing/FAQ";
 import { Metadata } from "next";
@@ -8,7 +7,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Tentang Kami — Rekberin",
   description:
-    "Pelajari cara kerja Rekberin, kalkulator fee, admin rekber terverifikasi, dan FAQ seputar jual beli akun game aman.",
+    "Pelajari cara kerja Rekberin dan FAQ seputar jual beli akun game yang aman di eFootball, Mobile Legends, dan FC Mobile.",
 };
 
 export default function TentangKamiPage() {
@@ -33,8 +32,7 @@ export default function TentangKamiPage() {
       </section>
 
       <HowItWorks />
-      <FeeCalculator />
-      <TopAdmins />
+      {/* <TopAdmins /> */}
       <TrustSafety />
       <FAQ />
     </>

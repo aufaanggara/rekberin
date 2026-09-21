@@ -56,7 +56,7 @@ const roleConfig = {
       { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
   seller: {
@@ -79,7 +79,7 @@ const roleConfig = {
       { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
   admin: {
@@ -122,7 +122,7 @@ const roleConfig = {
       { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Pasang Iklan Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
     ] as NavItem[],
   },
 };

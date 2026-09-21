@@ -8,7 +8,7 @@
 project_name: Rekberin
 legacy_or_prd_name: RekberGG
 project_type: web_platform
-domain: escrow_marketplace_for_eFootball_account_trading
+domain: escrow_marketplace_for_game_account_trading
 language: Indonesian
 phase: Phase 1 / MVP
 repository: https://github.com/aufaanggara/rekberin
@@ -61,6 +61,18 @@ testing_duration_days: 7
 developer_count: 4
 all_developers_fullstack: true
 one_issue_one_person: true
+
+current_ui_cleanup_2026_09_21:
+  public_admin_directory_routes:
+    status: removed
+    paths: [/rekber, "/rekber/[username]"]
+  admin_selection: retained_through_api_admins_and_buy_panel
+  browse_navigation_label: List Akun
+  listing_creation_label: Post Akun
+  supported_marketplace_games: [eFootball, Mobile Legends, FC Mobile]
+  marketplace_filters: selected_game_adaptive; common_filters_only_for_all_games; game_specific_state_resets_on_game_change
+  transaction_fee_summary: one_reusable_breakdown_uses_persisted_price_platformFee_and_adminFee_in_buyer_seller_admin_views
+  logout: sign_out_then_relative_same_origin_root_navigation; no_localhost_callback_injection
 ```
 
 ### CURRENT_TEAM
@@ -103,7 +115,7 @@ Aufa:
 
 ### ONE_SENTENCE
 
-Rekberin is a web escrow marketplace for safer buying and selling of eFootball accounts: buyer, seller, internal escrow admin, and super admin use one platform for listing, payment, transaction tracking, handover, chat, review, and dispute handling.
+Rekberin is a web escrow marketplace for safer buying and selling of eFootball, Mobile Legends, and FC Mobile accounts: buyer, seller, internal escrow admin, and super admin use one platform for listing, payment, transaction tracking, handover, chat, review, and dispute handling.
 
 ### PROBLEM
 

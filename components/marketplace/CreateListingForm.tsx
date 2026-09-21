@@ -169,7 +169,7 @@ export function CreateListingForm() {
       }
 
       const result = parseListingDetailResponse(payload);
-      toast.success("Iklan akun berhasil diterbitkan ke katalog!");
+      toast.success("Post akun berhasil diterbitkan ke katalog!");
       router.push(`/listings/${result.listing.id}`);
     } catch (requestError) {
       toast.error(
@@ -295,9 +295,9 @@ export function CreateListingForm() {
           )}
         </div>
 
-        {/* 2. INFORMASI UTAMA IKLAN */}
+        {/* 2. INFORMASI UTAMA POST AKUN */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
-          <h3 className="font-bold text-slate-900 text-sm sm:text-base">Informasi Iklan</h3>
+          <h3 className="font-bold text-slate-900 text-sm sm:text-base">Informasi Post Akun</h3>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -329,7 +329,7 @@ export function CreateListingForm() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Judul Iklan Akun</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Judul Post Akun</label>
             <input
               type="text"
               required
@@ -472,10 +472,10 @@ export function CreateListingForm() {
           className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
         >
           {loading ? (
-            "Menerbitkan Iklan Akun..."
+            "Menerbitkan Post Akun..."
           ) : (
             <>
-              <CheckCircle2 size={18} /> Publikasikan Iklan ke Marketplace
+              <CheckCircle2 size={18} /> Publikasikan Post ke Marketplace
             </>
           )}
         </button>
@@ -484,7 +484,7 @@ export function CreateListingForm() {
       {/* Preview Card Kanan (Desktop) */}
       <div className="hidden lg:block sticky top-24 space-y-4">
         <div className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-          <Eye size={14} className="text-blue-600" /> Pratinjau Tampilan Iklan:
+          <Eye size={14} className="text-blue-600" /> Pratinjau Tampilan Post Akun:
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
@@ -507,7 +507,7 @@ export function CreateListingForm() {
                 {price ? formatRupiah(Number(price)) : "Rp 0"}
               </span>
               <h4 className="font-bold text-slate-900 text-sm line-clamp-1 mt-0.5">
-                {title || "Judul Iklan Akunmu"}
+                {title || "Judul Post Akunmu"}
               </h4>
             </div>
 

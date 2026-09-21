@@ -73,12 +73,6 @@ export function FeaturedGrid() {
               {tab.label}
             </button>
           ))}
-          <Link
-            href="/listings"
-            className="ml-auto text-sm font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap px-3 py-3 flex items-center gap-1"
-          >
-            Lihat Semua <ArrowRight size={14} />
-          </Link>
         </div>
 
         {/* Listing Cards Grid */}
