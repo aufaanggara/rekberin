@@ -13,6 +13,8 @@ export function formatRupiah(amount: number) {
   }).format(amount);
 }
 
+export const formatCurrency = formatRupiah;
+
 export function trustLabel(score: number) {
   if (score >= 90) return { label: "Excellent", color: "text-accent-success" };
   if (score >= 75) return { label: "Good", color: "text-accent-primary" };

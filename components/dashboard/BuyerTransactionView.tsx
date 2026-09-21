@@ -1,25 +1,49 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, CheckCircle2, Lock, AlertTriangle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
-import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
-import {
-  getTransactionBuyerTotal,
-  TransactionFeeSummary,
-} from "@/components/dashboard/TransactionFeeSummary";
-import { Avatar } from "@/components/ui/Avatar";
-import { formatRupiah } from "@/lib/utils";
+import { ProgressiveTransactionTabs } from "@/components/dashboard/ProgressiveTransactionTabs";
+import { NegotiationTabView } from "@/components/dashboard/NegotiationTabView";
+import { RekberTabView } from "@/components/dashboard/RekberTabView";
+import { AmankanAkunTabView } from "@/components/dashboard/AmankanAkunTabView";
+import { DisbursementTabView } from "@/components/dashboard/DisbursementTabView";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
+import type { ChatTabStage } from "@/types";
+import { toast } from "sonner";
 
 export function BuyerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
   const tx = initialTransaction;
 
-  const totalPayment = getTransactionBuyerTotal(tx);
-  const isPendingPayment = tx.status === "PENDING_PAYMENT";
+  const getInitialStage = (): ChatTabStage => {
+    if (tx.status === "COMPLETED") {
+      return "DISBURSEMENT";
+    }
+    if (
+      tx.status === "PAYMENT_CONFIRMED" ||
+      tx.status === "IN_HANDOVER" ||
+      tx.status === "PENDING_BUYER_CONFIRM"
+    ) {
+      return "HANDOVER";
+    }
+    if (tx.status === "PENDING_PAYMENT") {
+      return "REKBER";
+    }
+    return "NEGOTIATION";
+  };
+
+  const [activeStage, setActiveStage] = useState<ChatTabStage>(getInitialStage());
+
+  const handleConfirmReceipt = () => {
+    toast.success("Akun berhasil dikonfirmasi! Silakan lanjut ke Tahap 4 untuk pencairan dana bersama Admin.");
+  };
+
+  const handleOpenDispute = () => {
+    toast.info("Form komplain/dispute terbuka. Admin Rekber akan segera meninjau.");
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col lg:flex-row gap-8">
@@ -37,144 +61,137 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
             <div>
               <h1 className="font-display text-2xl font-bold">Transaksi #{tx.id.slice(-4)}</h1>
               <p className="text-txt-muted text-xs sm:text-sm">
-                Dibuat pada {new Date(tx.createdAt).toLocaleString("id-ID")}
+                Item: <strong className="text-slate-800">{tx.listing.title}</strong> · {new Date(tx.createdAt).toLocaleString("id-ID")}
               </p>
             </div>
             <StatusBadge status={tx.status} />
           </div>
         </div>
 
-        {/* Payment is intentionally read-only until the payment scope is implemented. */}
-        {isPendingPayment && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3" role="status">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0">
-                <AlertTriangle size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-amber-950 text-sm">Menunggu Pembayaran</h4>
-                <p className="text-xs text-amber-800 mt-0.5">
-                  Total transaksi <strong>{formatRupiah(totalPayment)}</strong>. Integrasi pembayaran belum tersedia pada tahap ini, sehingga halaman hanya menampilkan status dari API.
-                </p>
-              </div>
+        {/* 🌟 4-Stage Progressive Tab Navigation & Timeline Bar */}
+        <ProgressiveTransactionTabs
+          currentStage={activeStage}
+          onSelectStage={setActiveStage}
+          transactionStatus={tx.status}
+          offerStatus="ACCEPTED"
+        />
+
+        {/* 🌟 Tab 1: Negosiasi (Side by Side dengan Chat 2 Arah) */}
+        {activeStage === "NEGOTIATION" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <NegotiationTabView
+                listingId={tx.listing.id}
+                originalPrice={tx.price}
+                role="BUYER"
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                isSuspendedDueToOtherBuyer={tx.id === "trx_buyer_suspended"}
+                isLocked={activeStage !== "NEGOTIATION"}
+                onProceedToCheckout={() => setActiveStage("REKBER")}
+              />
+            </div>
+            <div className="lg:col-span-6">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="BUYER"
+                defaultUserName={tx.buyer.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
             </div>
           </div>
         )}
 
-        {/* 3 Column Summary Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Card 1: Rincian Tagihan */}
-          <Card>
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="text-txt-muted text-xs mb-0.5">Item Akun</p>
-                <p className="font-medium text-slate-900 line-clamp-2">{tx.listing.title}</p>
-              </div>
-
-              <TransactionFeeSummary
+        {/* 🌟 Tab 2: Bayar ke Rekber (Side by Side dengan Chat 3 Arah) */}
+        {activeStage === "REKBER" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <RekberTabView
+                transactionId={tx.id}
                 price={tx.price}
                 platformFee={tx.platformFee}
                 adminFee={tx.adminFee}
+                adminName={tx.admin.user.username}
+                adminRole="Admin Rekber Internal"
+                transactionStatus={tx.status}
+                role="BUYER"
+                onOpenDispute={handleOpenDispute}
+                onMoveToHandover={() => setActiveStage("HANDOVER")}
               />
-
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-600 flex items-start gap-2 mt-4" role="status">
-                <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-slate-700">Status transaksi bersifat read-only</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Pembayaran, escrow, dan perubahan status belum memiliki aksi pada tahap ini.
-                  </p>
-                </div>
-              </div>
             </div>
-          </Card>
-
-          {/* Card 2: Timeline Status Transaksi */}
-          <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Status & Timeline</h3>
-            <TransactionTimeline steps={tx.timeline} />
-
-            <h4 className="font-semibold mt-6 mb-2.5 text-xs uppercase tracking-wider text-slate-500">
-              Panduan Serah Terima
-            </h4>
-            <div className="space-y-2">
-              {tx.checklist.map((c, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                  <CheckCircle2
-                    size={14}
-                    className={`mt-0.5 shrink-0 ${
-                      c.checked ? "text-emerald-500" : "text-slate-300"
-                    }`}
-                  />
-                  <span className={c.checked ? "line-through text-slate-400" : ""}>{c.label}</span>
-                </div>
-              ))}
+            <div className="lg:col-span-6">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="BUYER"
+                defaultUserName={tx.buyer.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
             </div>
-          </Card>
+          </div>
+        )}
 
-          {/* Card 3: Pihak Terlibat */}
-          <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Pihak Terlibat</h3>
-            <div className="space-y-4 text-sm">
-              {/* Seller */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <p className="text-txt-muted text-[11px] font-semibold uppercase tracking-wider mb-2">
-                  Penjual Akun
-                </p>
-                <div className="flex items-center gap-3">
-                  <Avatar name={tx.listing.seller.fullName} size={36} />
-                  <div>
-                    <p className="font-semibold text-slate-900">{tx.listing.seller.username}</p>
-                    <p className="text-xs text-txt-muted">
-                      Rating: {tx.listing.seller.rating ?? "Belum tersedia"} · {tx.listing.seller.totalTransactions ?? "—"} Terjual
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Admin Escrow */}
-              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-amber-800 text-[11px] font-semibold uppercase tracking-wider">
-                    Admin Escrow Rekber
-                  </p>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 flex items-center gap-1">
-                    <ShieldCheck size={11} /> Terverifikasi
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Avatar name={tx.admin.user.fullName} size={36} />
-                  <div>
-                    <p className="font-semibold text-slate-900">{tx.admin.user.username}</p>
-                    <p className="text-xs text-amber-700">
-                      Trust Score: {tx.admin.trustScore !== null ? `${tx.admin.trustScore}%` : "Belum tersedia"} · {tx.admin.totalSuccess ?? "—"} Sukses
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
-                <div className="flex items-center gap-1.5 font-semibold text-slate-700 mb-1">
-                  <Lock size={12} className="text-blue-600" /> Perlindungan Transaksi
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  Detail perlindungan dan refund belum memiliki aksi pada tahap ini; status transaksi tetap mengikuti data API.
-                </p>
-              </div>
+        {/* 🌟 Tab 3: Amankan Akun (Side by Side dengan Chat 2 Arah Privat) */}
+        {activeStage === "HANDOVER" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <AmankanAkunTabView
+                transactionId={tx.id}
+                role="BUYER"
+                transactionStatus={tx.status}
+                onConfirmReceipt={handleConfirmReceipt}
+                onProceedToDisbursement={() => setActiveStage("DISBURSEMENT")}
+              />
             </div>
-          </Card>
-        </div>
+            <div className="lg:col-span-6">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="BUYER"
+                defaultUserName={tx.buyer.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
+            </div>
+          </div>
+        )}
 
-        <TransactionChat
-          transactionId={tx.id}
-          transactionStatus={tx.status}
-          defaultRole="BUYER"
-          defaultUserName={tx.buyer.username}
-          buyerName={tx.buyer.username}
-          sellerName={tx.listing.seller.username}
-          adminName={tx.admin.user.username}
-        />
+        {/* 🌟 Tab 4: Pencairan Dana & Selesai (Side by Side dengan Chat 3 Arah) */}
+        {activeStage === "DISBURSEMENT" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <DisbursementTabView
+                transactionId={tx.id}
+                price={tx.price}
+                sellerName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                adminName={tx.admin.user.username}
+                role="BUYER"
+                transactionStatus={tx.status}
+              />
+            </div>
+            <div className="lg:col-span-6">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="BUYER"
+                defaultUserName={tx.buyer.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+
