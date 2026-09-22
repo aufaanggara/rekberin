@@ -114,6 +114,76 @@ progressive_chat_and_transaction_flow_2026_09_21:
     note: Tahap 1 sampai 4 saat ini dibuka kuncinya (unlocked) agar developer (Afiq/team) dapat bebas mengklik dan mereview seluruh tampilan antarmuka dan form tanpa terblokir status transaksi.
 ```
 
+## CURRENT_IMPLEMENTATION_STATE_2026_09_22
+
+> This section is the authoritative implementation snapshot for the current QRIS work. It supersedes older DEV-02 progress notes below.
+
+```yaml
+branch: feat/issue-02-midtrans-qris
+qris_issue: DEV-02
+qris_status: implemented_on_working_tree; sandbox_generation_verified
+payment_provider: Midtrans
+payment_api: legacy_Core_API
+snap_integration: false
+production_payment: out_of_scope
+
+midtrans_runtime:
+  environment: sandbox
+  charge_endpoint: https://api.sandbox.midtrans.com/v2/charge
+  status_endpoint: https://api.sandbox.midtrans.com/v2/{order_id}/status
+  qris_acquirer: gopay
+  qris_expiry_minutes: 15
+  backend_auth: Server_Key_as_Basic_Auth_username_with_empty_password
+  client_key_required: false
+  client_key_note: only_required_if_Snap_js_or_frontend_card_tokenization_is_added
+  server_key_storage: server_only_environment_variable; never_NEXT_PUBLIC_
+  notification_url: public_https_url_ending_in_/api/webhooks/midtrans
+
+payment_flow:
+  create_route: POST /api/transactions/[id]/payment
+  status_probe: GET Midtrans status before charge
+  missing_provider_transaction: Midtrans 404 status payload is treated as not_found_and_returns_null
+  charge_fallback: POST /v2/charge with payment_type_qris
+  order_id: deterministic_rekberin_qris_transaction_id
+  persistence: one_Payment_per_Transaction; QR URL, provider identity, amount, expiry, and status stored
+  webhook_route: POST /api/webhooks/midtrans
+  status_sync: webhook_or_sync_updates_Payment_and_related_Transaction
+
+parser_rules:
+  status_response_requires_qr_code: false
+  charge_response_requires_qr_code: true
+  existing_qr_preserved_on_sync: true
+  provider_404_status: non_error_missing_transaction_before_first_charge
+
+verified_result:
+  successful_response: HTTP_201
+  database_result: Prisma_COMMIT
+  qr_url_host: api.sandbox.midtrans.com
+  qr_url_path_pattern: /v2/qris/{provider_transaction_id}/qr-code
+  simulator: https://simulator.sandbox.midtrans.com/openapi/qris/index
+  payment_data_contains_no_credentials: true
+
+tunnel_constraints:
+  purpose: inbound_Midtrans_webhook_only; not_required_for_outbound_QRIS_charge
+  quick_tunnel_url: ephemeral_trycloudflare_hostname; update_notification_url_after_every_restart
+  public_webhook_get_behavior: 405_is_expected_because_route_accepts_POST_only
+  quic_instability_fallback: use_cloudflared_protocol_http2_if_network_blocks_UDP_7844
+
+security:
+  credentials_in_context: false
+  credentials_in_repository: false
+  sandbox_only: true
+```
+
+### DEV-02_ACCEPTANCE_STATE
+
+- Sandbox QRIS can be generated from an eligible `PENDING_PAYMENT` transaction.
+- A provider status response indicating that the order does not exist no longer rolls back the local payment transaction; it triggers the first charge request.
+- QR amount, expiry, provider identity, status, and QR URL are persisted against the correct transaction.
+- Payment status can represent pending, settlement, expiry, denial, cancellation, and failure; settlement/failure updates the related transaction according to the payment state rules.
+- Client Key is intentionally not part of the current configuration because the implementation does not use Snap.js.
+- The public webhook URL must include `/api/webhooks/midtrans`; a bare tunnel origin is incorrect for notifications.
+
 ### CURRENT_TEAM
 
 | Member | Permanent role | Current ownership | Issue range |
@@ -1426,7 +1496,7 @@ unit_tests: 6/6 passed
 | DEV-07 Listing Management | ✅ Done | `bagas/listing-management-DEV07` | Merged to main |
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
-| DEV-02 QRIS/Payment | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-02 QRIS/Payment | ✅ Implemented on working tree; Sandbox verified | `feat/issue-02-midtrans-qris` | Assigned: Ibrahim. Core API QRIS; parser handles provider 404 before first charge; webhook path configured. |
 | DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |

@@ -117,13 +117,37 @@ Catatan implementasi:
 - UI dapat memilih gambar, tetapi payload saat ini tidak menyimpan gambar; hanya teks placeholder yang dikirim.
 - Tidak ada WebSocket; keputusan MVP adalah polling.
 
+## Payment QRIS Midtrans Sandbox
+
+```text
+Buyer membuka transaksi PENDING_PAYMENT
+  ↓
+GET /api/transactions/[id]/payment
+  ├─ 404 kosong awal (UI tetap tanpa error)
+  └─ payment tersimpan → tampilkan QRIS yang sama
+  ↓
+POST /api/transactions/[id]/payment
+  ├─ hitung price + platformFee + adminFee dari database
+  ├─ pulihkan status berdasarkan order ID deterministik atau charge QRIS
+  └─ kembalikan DTO payment buyer-only
+  ↓
+POST /api/transactions/[id]/payment/sync setiap ≥10 detik saat pending
+  atau POST /api/webhooks/midtrans
+  ↓
+settlement → Payment SETTLEMENT, Transaction PAYMENT_CONFIRMED
+expire/deny/cancel/failure → Payment terminal, Transaction CANCELLED,
+listing AVAILABLE
+```
+
+Technical provider errors remain operational errors: they do not mark buyer failure or release the listing. Seller/admin only see transaction status and never receive QR/payment identity.
+
 ## Aksi escrow yang belum terhubung
 
 Beberapa komponen visual sudah ada, tetapi belum menjadi alur API:
 
 | Fitur | Kondisi |
 |---|---|
-| Payment modal | QR/VA dan countdown simulasi; `useStore.payTransaction` lokal |
+| Payment modal | QRIS Midtrans Sandbox, server expiry countdown, and provider polling |
 | Payment proof | UI lama/dummy; belum ada endpoint atau model PaymentProof |
 | Handover/vault | Credential berada di Zustand memory; belum persisten dan belum aman untuk production |
 | Admin status action | `ActionPanel` hanya toast “demo”; detail admin saat ini read-only |

@@ -11,7 +11,7 @@ Status berikut disusun dari source code branch yang sedang digunakan, bukan dari
 | DEV-07 Listing management | ✅ Selesai (Create, read, edit, deactivate) | `app/api/listings/`, `CreateListingForm.tsx` |
 | DEV-08 Marketplace integration | Listing marketplace memakai API; direktori admin belum | `useListings.ts`, `ListingsExplorer.tsx`, `/rekber` |
 | DEV-01 Transaction flow | Create/read tersedia | `lib/transactions.ts`, transaction routes, transaction E2E |
-| DEV-02 QRIS/payment | Belum terhubung | `PaymentModal.tsx` masih `useStore`/simulasi; tidak ada payment route/model |
+| DEV-02 QRIS/payment | Implemented Sandbox path | Midtrans Core API QRIS, buyer-only payment routes, webhook reconciliation, persistent Payment, and QRIS-only buyer modal |
 | DEV-03 Handover | Belum terhubung | `AccountVaultPanel.tsx` dan checklist masih local/demo |
 | DEV-04 Dispute | Belum terhubung | `DisputeModal.tsx`/store lokal; tidak ada mutation route |
 | DEV-09 Chat | API + polling tersedia | `messages/route.ts`, `TransactionChat.tsx` |
@@ -77,10 +77,10 @@ Status berikut disusun dari source code branch yang sedang digunakan, bukan dari
 
 ```text
 1. Tetapkan state machine + API mutation transaksi
-2. Tambahkan payment/payment-proof persistence sandbox
+2. Tambahkan payment-proof persistence only if a future issue explicitly scopes it
 3. Hubungkan admin/buyer actions ke mutation dengan authorization server
 4. Persist handover/dispute/review dan audit activity
 5. Migrasikan dashboard/direktori dari dummy ke API
 6. Tambahkan test untuk setiap transition dan authorization boundary
-7. Tambahkan .env.example, health check, dan review cache PWA privat
+7. Tambahkan health check dan review cache PWA privat
 ```
