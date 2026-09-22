@@ -186,16 +186,26 @@ const quickReplies = [
 function UserDashboardContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ActiveTab>("buyer");
-  const [sellerView, setSellerView] = useState<"overview" | "chat" | "orders">("overview");
+  const [buyerView, setBuyerView] = useState<"overview" | "warranty">("overview");
+  const [sellerView, setSellerView] = useState<"overview" | "chat" | "orders" | "withdraw">("overview");
 
-  // Sync tab & view dari URL query param (?tab=seller&view=chat)
+  // Sync tab & view dari URL query param (?tab=seller&view=chat atau ?tab=seller&view=withdraw atau ?view=warranty)
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     const viewParam = searchParams.get("view");
     if (tabParam === "seller" || tabParam === "buyer") {
       setActiveTab(tabParam);
     }
-    if (viewParam === "chat" || viewParam === "orders" || viewParam === "overview") {
+    if (viewParam === "warranty") {
+      setActiveTab("buyer");
+      setBuyerView("warranty");
+    } else {
+      setBuyerView("overview");
+    }
+    if (viewParam === "withdraw") {
+      setActiveTab("seller");
+      setSellerView("withdraw");
+    } else if (viewParam === "chat" || viewParam === "orders" || viewParam === "overview") {
       setSellerView(viewParam);
     } else if (!viewParam) {
       setSellerView("overview");
@@ -307,11 +317,11 @@ function UserDashboardContent() {
       prev.map((inq) =>
         inq.id === inqId
           ? {
-              ...inq,
-              replied: true,
-              replyText: text,
-              replyTime: "Baru saja",
-            }
+            ...inq,
+            replied: true,
+            replyText: text,
+            replyTime: "Baru saja",
+          }
           : inq
       )
     );
@@ -336,41 +346,39 @@ function UserDashboardContent() {
   const unrepliedInquiriesCount = inquiries.filter((i) => !i.replied).length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-8">
+    <div className="mx-auto max-w-7xl px-3 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
       <DashboardSidebar role="user" />
 
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
 
         {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-1.5 flex items-center gap-1">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-1 sm:p-1.5 flex items-center gap-1">
           <button
             onClick={() => setActiveTab("buyer")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all ${
-              activeTab === "buyer"
+            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "buyer"
                 ? "bg-blue-600 text-white shadow-md"
                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-            }`}
+              }`}
           >
-            <ShoppingCart size={16} />
-            <span>Sebagai Pembeli</span>
+            <ShoppingCart size={15} className="shrink-0" />
+            <span className="truncate">Sebagai Pembeli</span>
             {actionRequiredCount > 0 && activeTab !== "buyer" && (
-              <span className="w-5 h-5 bg-amber-500 text-white rounded-full text-[10px] font-black flex items-center justify-center">
+              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-amber-500 text-white rounded-full text-[9px] sm:text-[10px] font-black flex items-center justify-center shrink-0">
                 {actionRequiredCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab("seller")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all ${
-              activeTab === "seller"
+            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "seller"
                 ? "bg-emerald-600 text-white shadow-md"
                 : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-            }`}
+              }`}
           >
-            <Store size={16} />
-            <span>Sebagai Penjual</span>
+            <Store size={15} className="shrink-0" />
+            <span className="truncate">Sebagai Penjual</span>
             {inquiries.filter(i => !i.replied).length > 0 && activeTab !== "seller" && (
-              <span className="w-5 h-5 bg-purple-500 text-white rounded-full text-[10px] font-black flex items-center justify-center">
+              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 text-white rounded-full text-[9px] sm:text-[10px] font-black flex items-center justify-center shrink-0">
                 {inquiries.filter(i => !i.replied).length}
               </span>
             )}
@@ -382,72 +390,165 @@ function UserDashboardContent() {
         ══════════════════════════════════════════════════════════════════════ */}
         {activeTab === "buyer" && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {buyerView === "warranty" ? (
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <button
+                    onClick={() => setBuyerView("overview")}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Kembali ke Transaksi</span>
+                  </button>
+                  <span className="text-[11px] sm:text-xs text-slate-400 font-medium hidden sm:block">Panduan Resmi Proteksi Escrow Rekberin</span>
+                </div>
 
-            {/* Kotakan Panduan Garansi */}
-            <div className="group relative overflow-hidden bg-white hover:bg-blue-50/20 rounded-2xl border border-slate-200 hover:border-blue-300 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                      <ShieldCheck size={22} className="stroke-[2.2]" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                          Proteksi Escrow Rekberin
-                        </span>
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                          Garansi 48 Jam
-                        </span>
+                {/* Main Warranty Card */}
+                <div className="overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg relative">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-md text-white flex items-center justify-center shrink-0 shadow-inner">
+                        <ShieldCheck size={32} className="stroke-[2.2]" />
                       </div>
-                      <h3 className="text-lg font-black text-slate-900 mt-0.5">Panduan Garansi & Klaim</h3>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white/20 text-blue-100">
+                            Proteksi Escrow Rekberin
+                          </span>
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950">
+                            Garansi 48 Jam
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-white">Panduan Garansi Anti-Hackback</h2>
+                        <p className="text-xs sm:text-sm text-blue-100/90 mt-1 max-w-xl leading-relaxed">
+                          Perlindungan 100% uang kembali dari risiko hackback atau sengketa akun game. Ketahui hak, syarat klaim, dan alur perlindungan dana Anda.
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      onClick={() => setIsWarrantyGuideOpen(true)}
+                      className="bg-white hover:bg-blue-50 text-blue-800 font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-2 shadow-md cursor-pointer shrink-0"
+                    >
+                      <ShieldCheck size={16} />
+                      <span>Buka Modal Lengkap</span>
+                    </Button>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                  Perlindungan 100% uang kembali dari risiko hackback. Ketahui syarat klaim, alur pengaduan admin, dan tips aman.
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsWarrantyGuideOpen(true)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-              >
-                <ShieldCheck size={15} />
-                <span>Klik untuk Panduan Garansi</span>
-              </Button>
-            </div>
 
-            {/* Transactions List */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {filter === "WISHLIST" ? "Daftar Akun Game Disimpan (Wishlist)" : "Daftar Transaksi Pembelian"}
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    {filter === "WISHLIST"
-                      ? "Bandingkan akun game incaran dan lakukan checkout langsung lewat rekber resmi."
-                      : "Kelola status pesanan, klaim garansi, dan cetak struk pembayaran resmi."}
-                  </p>
+                {/* Highlight Features */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-2.5">
+                      <Clock size={18} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm mb-1">Masa Garansi 48 Jam</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Garansi otomatis aktif tepat saat serah terima akun selesai dan dikonfirmasi oleh pembeli.
+                    </p>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm mb-1">100% Uang Kembali (Refund)</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Pengembalian dana penuh langsung ke saldo rekber Anda jika akun ditarik kembali oleh penjual.
+                    </p>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-2.5">
+                      <AlertCircle size={18} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-xs sm:text-sm mb-1">Respon Cepat Admin &lt; 2 Jam</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Admin rekber berlisensi resmi langsung membekukan saldo penjual dan menangani sengketa Anda.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl self-start sm:self-auto overflow-x-auto">
-                  {(["ALL", "ACTION_NEEDED", "IN_PROGRESS", "COMPLETED", "WISHLIST"] as FilterTab[]).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setFilter(f)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
-                        filter === f ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      {f === "ALL" && `Semua (${dummyTransactions.length})`}
-                      {f === "ACTION_NEEDED" && `Perlu Tindakan (${actionRequiredCount})`}
-                      {f === "IN_PROGRESS" && "Diproses"}
-                      {f === "COMPLETED" && `Selesai (${completedTx.length})`}
-                      {f === "WISHLIST" && `♥ Wishlist (${wishlistIds.length})`}
-                    </button>
-                  ))}
+
+                {/* Detailed Steps & Terms */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-5">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">1</span>
+                      Cakupan yang Dijamin Garansi
+                    </h3>
+                    <ul className="text-xs text-slate-600 space-y-2 pl-8 list-disc">
+                      <li>
+                        <strong className="text-slate-800">Hackback / Pemulihan Akun:</strong> Akun di-recover atau password diubah paksa oleh penjual/pemilik pertama dalam masa 48 jam.
+                      </li>
+                      <li>
+                        <strong className="text-slate-800">Spesifikasi Tidak Sesuai:</strong> Item, squad, atau level game berbeda fatal dengan apa yang ditulis di deskripsi post akun.
+                      </li>
+                      <li>
+                        <strong className="text-slate-800">Sanksi Banned Sebelumnya:</strong> Akun terkena suspend akibat pelanggaran yang dilakukan penjual sebelum transaksi berlangsung.
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100">
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-3">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center">2</span>
+                      Alur Cara Klaim Garansi
+                    </h3>
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">A</span>
+                        <p className="text-xs text-slate-700">
+                          Buka riwayat transaksi di <strong>Dashboard User</strong> dan klik tombol <strong>Klaim Garansi</strong> pada kartu pesanan yang telah tuntas.
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">B</span>
+                        <p className="text-xs text-slate-700">
+                          Unggah bukti otentik seperti screenshot gagal login, notifikasi pergantian email pemulihan dari developer, atau log mencurigakan.
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="text-xs font-black text-blue-600 bg-white border border-blue-200 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5">C</span>
+                        <p className="text-xs text-slate-700">
+                          Admin Rekber resmi akan melakukan investigasi. Jika terbukti benar hackback, dana escrow langsung di-refund ke Saldo Rekber Anda.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                    <h5 className="font-bold text-amber-900 text-xs flex items-center gap-1.5 mb-1.5">
+                      <AlertCircle size={14} className="text-amber-600" />
+                      Ketentuan Penting Menjaga Keabsahan Garansi
+                    </h5>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Pembeli wajib segera mengganti password, email pemulihan, dan mengaktifkan verifikasi 2 langkah (2FA) saat serah terima. Garansi tidak berlaku jika pembeli menggunakan cheat/aplikasi ilegal pihak ketiga atau membagikan kredensial ke pihak lain di luar platform Rekberin.
+                    </p>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <>
+                {/* Transactions List */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="p-3.5 sm:p-5 border-b border-slate-100 flex flex-col gap-2.5 sm:gap-3">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                      {filter === "WISHLIST" ? "Daftar Akun Game Disimpan (Wishlist)" : "Daftar Transaksi Pembelian"}
+                    </h2>
+                    <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto scrollbar-none">
+                      {(["ALL", "ACTION_NEEDED", "IN_PROGRESS", "COMPLETED", "WISHLIST"] as FilterTab[]).map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setFilter(f)}
+                          className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 ${filter === f ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                            }`}
+                        >
+                          {f === "ALL" && `Semua (${dummyTransactions.length})`}
+                          {f === "ACTION_NEEDED" && `Perlu Tindakan (${actionRequiredCount})`}
+                          {f === "IN_PROGRESS" && "Diproses"}
+                          {f === "COMPLETED" && `Selesai (${completedTx.length})`}
+                          {f === "WISHLIST" && `♥ Wishlist (${wishlistIds.length})`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
               {filter === "WISHLIST" ? (
                 <div className="p-4 sm:p-6">
@@ -544,7 +645,7 @@ function UserDashboardContent() {
                   {filteredTransactions.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 text-xs">Tidak ada transaksi pada filter ini.</div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
                       {filteredTransactions.map((t) => {
                         const doneSteps = t.timeline.filter((s) => s.done).length;
                         const progressPct = Math.round((doneSteps / t.timeline.length) * 100);
@@ -556,11 +657,10 @@ function UserDashboardContent() {
                           <div
                             key={t.id}
                             onClick={() => setSelectedDetailTx(t)}
-                            className={`group rounded-2xl border p-3.5 transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between ${
-                              isActionRequired
+                            className={`group rounded-2xl border p-3.5 transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between ${isActionRequired
                                 ? "border-amber-300 bg-amber-50/15 shadow-sm ring-2 ring-amber-400/20"
                                 : "border-slate-200 bg-white hover:border-blue-400"
-                            }`}
+                              }`}
                           >
                             <div>
                               {/* Photo Area */}
@@ -627,9 +727,8 @@ function UserDashboardContent() {
                                 </div>
                                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                                   <div
-                                    className={`h-full transition-all duration-300 ${
-                                      isCompleted ? "bg-emerald-500" : isActionRequired ? "bg-amber-500" : "bg-blue-600"
-                                    }`}
+                                    className={`h-full transition-all duration-300 ${isCompleted ? "bg-emerald-500" : isActionRequired ? "bg-amber-500" : "bg-blue-600"
+                                      }`}
                                     style={{ width: `${progressPct}%` }}
                                   />
                                 </div>
@@ -649,6 +748,8 @@ function UserDashboardContent() {
                 </div>
               )}
             </div>
+              </>
+            )}
           </div>
         )}
 
@@ -661,112 +762,20 @@ function UserDashboardContent() {
             {/* VIEW 1: OVERVIEW & LISTINGS */}
             {sellerView === "overview" && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                {/* Seller Balance Card — Compact & Sleek */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                      <Wallet size={24} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                          Saldo Hasil Penjualan
-                        </span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Siap Ditarik
-                        </span>
-                      </div>
-                      <p className="text-2xl sm:text-3xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">Hasil penjualan akun game yang telah tuntas dan siap dicairkan ke rekening bank atau e-wallet.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      onClick={() => {
-                        setWithdrawContext("seller");
-                        setWithdrawAmountInput("2.450.000");
-                        setIsWithdrawModalOpen(true);
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <ArrowUpRight size={15} />
-                      <span>Tarik Saldo</span>
-                    </Button>
-                    <button
-                      onClick={() => setShowWithdrawHistory(!showWithdrawHistory)}
-                      className="text-xs font-bold text-slate-600 hover:text-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5 cursor-pointer bg-white"
-                    >
-                      <History size={14} />
-                      <span>{showWithdrawHistory ? "Tutup Log" : "Riwayat"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Withdrawal History */}
-                {showWithdrawHistory && (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <History size={16} className="text-emerald-600" />
-                        <h3 className="font-bold text-slate-900 text-sm">Riwayat Penarikan Saldo</h3>
-                      </div>
-                      <button onClick={() => setShowWithdrawHistory(false)} className="text-xs text-slate-400 hover:text-slate-600">Tutup</button>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider text-left bg-slate-50">
-                            <th className="py-2.5 px-3">ID Penarikan</th>
-                            <th className="py-2.5 px-3">Waktu</th>
-                            <th className="py-2.5 px-3">Tujuan Transfer</th>
-                            <th className="py-2.5 px-3">Nominal</th>
-                            <th className="py-2.5 px-3 text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {withdrawals.map((w) => (
-                            <tr key={w.id} className="hover:bg-slate-50/70">
-                              <td className="py-3 px-3 font-mono font-bold text-slate-800">{w.id}</td>
-                              <td className="py-3 px-3 text-slate-500">{w.date}</td>
-                              <td className="py-3 px-3"><span className="font-bold text-slate-800">{w.bank}</span> <span className="text-slate-400">({w.accountNumber})</span></td>
-                              <td className="py-3 px-3 font-black text-slate-900">{formatRupiah(w.amount)}</td>
-                              <td className="py-3 px-3 text-right">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${w.status === "SUCCESS" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                                  {w.status === "SUCCESS" ? "Berhasil" : "Sedang Diproses"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
                 {/* Listings Management */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                  <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900">Kelola Katalog Post Akun Saya</h2>
-                      <p className="text-xs text-slate-400">Gunakan tombol Jeda/Aktifkan untuk menyembunyikan post akun sementara.</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto">
-                        {(["ALL", "AVAILABLE", "INACTIVE", "SOLD"] as const).map((f) => (
-                          <button key={f} onClick={() => setListingFilter(f)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
-                            {f === "ALL" && `Semua (${myListings.length})`}
-                            {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
-                            {f === "INACTIVE" && `Dijeda (${inactiveListings.length})`}
-                            {f === "SOLD" && `Terjual (${soldListings.length})`}
-                          </button>
-                        ))}
-                      </div>
-                      <Link href="/listings/new">
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">
-                          <PlusCircle size={13} className="mr-1" /> Post Akun Baru
-                        </Button>
-                      </Link>
+                  <div className="p-3.5 sm:p-5 border-b border-slate-100 flex flex-col gap-2.5 sm:gap-3">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Kelola Katalog Post Akun Saya</h2>
+                    <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto scrollbar-none">
+                      {(["ALL", "AVAILABLE", "INACTIVE", "SOLD"] as const).map((f) => (
+                        <button key={f} onClick={() => setListingFilter(f)}
+                          className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
+                          {f === "ALL" && `Semua (${myListings.length})`}
+                          {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
+                          {f === "INACTIVE" && `Dijeda (${inactiveListings.length})`}
+                          {f === "SOLD" && `Terjual (${soldListings.length})`}
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <div className="p-4 sm:p-6">
@@ -787,41 +796,47 @@ function UserDashboardContent() {
                           : "Tidak ada iklan pada kategori ini."}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
                         {filteredSellerListings.map((l) => {
                           const imgSrc = l.images && l.images.length > 0 ? l.images[0] : "/screenshots/efootball_89.jpg";
                           return (
                             <div
                               key={l.id}
-                              className={`group rounded-2xl border flex flex-col justify-between overflow-hidden transition-all duration-200 ${
-                                l.status === "INACTIVE"
+                              className={`group rounded-2xl border flex flex-col justify-between overflow-hidden transition-all duration-200 ${l.status === "INACTIVE"
                                   ? "border-dashed border-slate-300 opacity-70 bg-slate-50"
                                   : "border-slate-200 bg-white hover:border-emerald-400 hover:shadow-lg"
-                              }`}
+                                }`}
                             >
                               {/* Photo */}
-                              <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900">
+                              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+                                {/* Ambient blurred backdrop to fill empty space seamlessly */}
+                                <img
+                                  src={imgSrc}
+                                  alt=""
+                                  aria-hidden="true"
+                                  className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
+                                />
+                                {/* Main Image (Crisp & Uncropped) */}
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={imgSrc}
                                   alt={l.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  className="relative z-1 w-full h-full object-contain p-1 transition-transform duration-300 group-hover:scale-[1.02]"
                                   loading="lazy"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none z-2" />
 
                                 {/* Top Badges */}
                                 <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
                                   <span className="text-[10px] font-black px-2.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-md uppercase tracking-wider">
                                     {l.game}
                                   </span>
-                                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md ${
-                                    l.status === "INACTIVE"
+                                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md backdrop-blur-md ${l.status === "INACTIVE"
                                       ? "bg-amber-500/90 text-white"
                                       : l.status === "AVAILABLE"
-                                      ? "bg-emerald-500/90 text-white"
-                                      : "bg-slate-600/90 text-white"
-                                  }`}>
+                                        ? "bg-emerald-500/90 text-white"
+                                        : "bg-slate-600/90 text-white"
+                                    }`}>
                                     {l.status === "INACTIVE" ? "⏸ Dijeda" : l.status === "AVAILABLE" ? "● Aktif" : "✓ Terjual"}
                                   </span>
                                 </div>
@@ -849,14 +864,14 @@ function UserDashboardContent() {
                                 </div>
 
                                 {/* Actions */}
-                                <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-3">
+                                <div className="grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-3">
                                   {(l.status === "AVAILABLE" || l.status === "INACTIVE") && (
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleTogglePause(l.id, l.status)}
                                       disabled={togglingId === l.id}
-                                      className="text-xs flex-1"
+                                      className="text-xs w-full"
                                     >
                                       {togglingId === l.id ? (
                                         <><Loader2 size={13} className="mr-1 animate-spin" /> Proses...</>
@@ -868,18 +883,18 @@ function UserDashboardContent() {
                                     </Button>
                                   )}
                                   {(l.status === "AVAILABLE" || l.status === "INACTIVE") && (
-                                    <Link href={`/listings/${l.id}/edit`} className="flex-1">
+                                    <Link href={`/listings/${l.id}/edit`} className="w-full">
                                       <Button variant="outline" size="sm" className="text-xs w-full text-blue-600 hover:text-blue-700">
                                         <Pencil size={13} className="mr-1" /> Edit
                                       </Button>
                                     </Link>
                                   )}
-                                  <Button variant="outline" size="sm" onClick={() => handleCopyLink(l.id)} className="text-xs flex-1 text-slate-600 hover:text-blue-600">
+                                  <Button variant="outline" size="sm" onClick={() => handleCopyLink(l.id)} className="text-xs w-full text-slate-600 hover:text-blue-600">
                                     {copiedId === l.id
                                       ? <><Check size={13} className="mr-1 text-emerald-600" /> Tersalin</>
                                       : <><Share2 size={13} className="mr-1" /> Bagikan</>}
                                   </Button>
-                                  <Link href={`/listings/${l.id}`} className="flex-1">
+                                  <Link href={`/listings/${l.id}`} className={`w-full ${(l.status === "AVAILABLE" || l.status === "INACTIVE") ? "" : "col-span-2"}`}>
                                     <Button variant="secondary" size="sm" className="text-xs w-full">Lihat Post Akun</Button>
                                   </Link>
                                 </div>
@@ -897,7 +912,7 @@ function UserDashboardContent() {
             {/* VIEW 2: FULL CHAT CONSOLE */}
             {sellerView === "chat" && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
                     onClick={() => setSellerView("overview")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
@@ -905,7 +920,7 @@ function UserDashboardContent() {
                     <ArrowLeft size={14} />
                     <span>Kembali ke Ringkasan</span>
                   </button>
-                  <span className="text-xs text-slate-400 font-medium">Mode Pusat Diskusi & Chat Calon Pembeli</span>
+                  <span className="text-[11px] sm:text-xs text-slate-400 font-medium hidden sm:block">Mode Pusat Diskusi & Chat Calon Pembeli</span>
                 </div>
 
                 {/* Inquiries — Modern Split Inbox Console */}
@@ -940,7 +955,7 @@ function UserDashboardContent() {
                   </div>
 
                   {/* Master-Detail 2-Panel Area: Fixed height h-[560px] with min-h-0 for proper inner scroll */}
-                  <div className="flex flex-col md:flex-row h-[560px] max-h-[560px] overflow-hidden w-full min-w-0">
+                  <div className="flex flex-col md:flex-row h-[480px] sm:h-[520px] md:h-[560px] max-h-[560px] overflow-hidden w-full min-w-0">
                     {/* Left Panel: Search & Inquiries List */}
                     <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 min-w-0 flex flex-col h-full min-h-0 border-r border-slate-100 bg-slate-50/40 ${mobileInquiryView === "chat" ? "hidden md:flex" : "flex"}`}>
                       {/* Search Bar */}
@@ -968,38 +983,34 @@ function UserDashboardContent() {
                         <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5">
                           <button
                             onClick={() => setInquiryFilter("ALL")}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
-                              inquiryFilter === "ALL"
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${inquiryFilter === "ALL"
                                 ? "bg-purple-600 text-white shadow-xs"
                                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                            }`}
+                              }`}
                           >
                             Semua ({inquiries.length})
                           </button>
                           <button
                             onClick={() => setInquiryFilter("UNREPLIED")}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
-                              inquiryFilter === "UNREPLIED"
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${inquiryFilter === "UNREPLIED"
                                 ? "bg-purple-600 text-white shadow-xs"
                                 : "bg-purple-50 text-purple-700 hover:bg-purple-100"
-                            }`}
+                              }`}
                           >
                             <span>Belum Dibalas</span>
                             {unrepliedInquiriesCount > 0 && (
-                              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${
-                                inquiryFilter === "UNREPLIED" ? "bg-white text-purple-700 font-black" : "bg-purple-600 text-white font-bold"
-                              }`}>
+                              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${inquiryFilter === "UNREPLIED" ? "bg-white text-purple-700 font-black" : "bg-purple-600 text-white font-bold"
+                                }`}>
                                 {unrepliedInquiriesCount}
                               </span>
                             )}
                           </button>
                           <button
                             onClick={() => setInquiryFilter("REPLIED")}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${
-                              inquiryFilter === "REPLIED"
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer shrink-0 ${inquiryFilter === "REPLIED"
                                 ? "bg-purple-600 text-white shadow-xs"
                                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                            }`}
+                              }`}
                           >
                             Selesai ({inquiries.filter((i) => i.replied).length})
                           </button>
@@ -1024,17 +1035,15 @@ function UserDashboardContent() {
                                   setSelectedInquiryId(inq.id);
                                   setMobileInquiryView("chat");
                                 }}
-                                className={`p-3.5 transition-all cursor-pointer relative text-left select-none ${
-                                  isSelected
+                                className={`p-3.5 transition-all cursor-pointer relative text-left select-none ${isSelected
                                     ? "bg-purple-50/70 border-l-4 border-l-purple-600"
                                     : "hover:bg-slate-100/70 bg-white"
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-start justify-between gap-2 mb-1.5 min-w-0">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                                      !inq.replied ? "bg-purple-600 text-white ring-2 ring-purple-100" : "bg-slate-200 text-slate-700"
-                                    }`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${!inq.replied ? "bg-purple-600 text-white ring-2 ring-purple-100" : "bg-slate-200 text-slate-700"
+                                      }`}>
                                       {inq.buyerName.slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
@@ -1249,7 +1258,7 @@ function UserDashboardContent() {
             {/* VIEW 3: ACTIVE ORDERS */}
             {sellerView === "orders" && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
                     onClick={() => setSellerView("overview")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
@@ -1257,7 +1266,7 @@ function UserDashboardContent() {
                     <ArrowLeft size={14} />
                     <span>Kembali ke Ringkasan</span>
                   </button>
-                  <span className="text-xs text-slate-400 font-medium">Mode Pesanan & Serah Terima Rekber</span>
+                  <span className="text-[11px] sm:text-xs text-slate-400 font-medium hidden sm:block">Mode Pesanan & Serah Terima Rekber</span>
                 </div>
 
                 {/* Active Escrow Orders */}
@@ -1279,7 +1288,7 @@ function UserDashboardContent() {
                   {activeOrders.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 text-xs">Tidak ada transaksi yang sedang berjalan.</div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {activeOrders.map((order) => (
                         <div key={order.id} className="flex flex-col justify-between gap-3 p-4 rounded-xl bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 transition-all">
                           <div>
@@ -1293,10 +1302,10 @@ function UserDashboardContent() {
                               <p>Admin Rekber: <span className="font-bold text-slate-800">{order.admin.user.username}</span></p>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 mt-1">
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 mt-1 gap-2 flex-wrap">
                             <span className="font-black text-slate-900 text-sm">{formatRupiah(order.price)}</span>
                             <Link href={`/user/transactions/${order.id}`}>
-                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 h-auto font-bold rounded-lg cursor-pointer">
+                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 h-auto font-bold rounded-lg cursor-pointer whitespace-nowrap">
                                 Buka Room Serah Terima →
                               </Button>
                             </Link>
@@ -1305,6 +1314,93 @@ function UserDashboardContent() {
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: SALDO & RIWAYAT PENARIKAN (WITHDRAW) */}
+            {sellerView === "withdraw" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <button
+                    onClick={() => setSellerView("overview")}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Kembali ke Ringkasan</span>
+                  </button>
+                  <span className="text-[11px] sm:text-xs text-slate-400 font-medium hidden sm:block">Manajemen Saldo & Riwayat Penarikan Dana</span>
+                </div>
+
+                {/* Seller Balance Card — Compact & Sleek */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Wallet size={22} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                          Saldo Hasil Penjualan
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Siap Ditarik
+                        </span>
+                      </div>
+                      <p className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-600 mt-0.5">Rp 2.450.000</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 line-clamp-2 sm:truncate">Hasil penjualan akun game yang telah tuntas dan siap dicairkan ke rekening bank atau e-wallet.</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setWithdrawContext("seller");
+                      setWithdrawAmountInput("2.450.000");
+                      setIsWithdrawModalOpen(true);
+                    }}
+                    className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                  >
+                    <ArrowUpRight size={15} />
+                    <span>Tarik Saldo</span>
+                  </Button>
+                </div>
+
+                {/* Withdrawal History Log */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <History size={16} className="text-emerald-600" />
+                      <h3 className="font-bold text-slate-900 text-sm">Riwayat & Log Penarikan Saldo</h3>
+                    </div>
+                    <span className="text-xs text-slate-400">{withdrawals.length} Penarikan</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider text-left bg-slate-50">
+                          <th className="py-2.5 px-3">ID Penarikan</th>
+                          <th className="py-2.5 px-3">Waktu</th>
+                          <th className="py-2.5 px-3">Tujuan Transfer</th>
+                          <th className="py-2.5 px-3">Nominal</th>
+                          <th className="py-2.5 px-3 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {withdrawals.map((w) => (
+                          <tr key={w.id} className="hover:bg-slate-50/70">
+                            <td className="py-3 px-3 font-mono font-bold text-slate-800">{w.id}</td>
+                            <td className="py-3 px-3 text-slate-500">{w.date}</td>
+                            <td className="py-3 px-3"><span className="font-bold text-slate-800">{w.bank}</span> <span className="text-slate-400">({w.accountNumber})</span></td>
+                            <td className="py-3 px-3 font-black text-slate-900">{formatRupiah(w.amount)}</td>
+                            <td className="py-3 px-3 text-right">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${w.status === "SUCCESS" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                                {w.status === "SUCCESS" ? "Berhasil" : "Sedang Diproses"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -1394,9 +1490,8 @@ function UserDashboardContent() {
                 <div className="space-y-3 relative pl-4 border-l-2 border-slate-200 ml-2">
                   {selectedDetailTx.timeline.map((step, idx) => (
                     <div key={idx} className="relative">
-                      <div className={`absolute -left-[23px] top-0.5 w-3.5 h-3.5 rounded-full border-2 bg-white ${
-                        step.done ? "border-emerald-500 bg-emerald-500" : "border-slate-300"
-                      }`} />
+                      <div className={`absolute -left-[23px] top-0.5 w-3.5 h-3.5 rounded-full border-2 bg-white ${step.done ? "border-emerald-500 bg-emerald-500" : "border-slate-300"
+                        }`} />
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className={`text-xs font-bold ${step.done ? "text-slate-900" : "text-slate-400"}`}>
@@ -1417,7 +1512,7 @@ function UserDashboardContent() {
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="p-3.5 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -1449,18 +1544,17 @@ function UserDashboardContent() {
               <Link href={`/user/transactions/${selectedDetailTx.id}`} className="flex-1 sm:flex-initial">
                 <Button
                   size="sm"
-                  className={`w-full sm:w-auto text-xs font-bold ${
-                    selectedDetailTx.status === "PENDING_PAYMENT"
+                  className={`w-full sm:w-auto text-xs font-bold ${selectedDetailTx.status === "PENDING_PAYMENT"
                       ? "bg-amber-600 hover:bg-amber-700 text-white"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
+                    }`}
                 >
                   <MessageSquare size={13} className="mr-1.5" />
                   {selectedDetailTx.status === "PENDING_PAYMENT"
                     ? "Bayar & Buka Chat"
                     : selectedDetailTx.status === "PENDING_BUYER_CONFIRM"
-                    ? "Cek Akun & Konfirmasi"
-                    : "Buka Room Transaksi"}
+                      ? "Cek Akun & Konfirmasi"
+                      : "Buka Room Transaksi"}
                 </Button>
               </Link>
             </div>
@@ -1693,7 +1787,7 @@ function UserDashboardContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3 shrink-0 flex-wrap">
               <Link href="/tentang-kami">
                 <Button variant="secondary" size="sm" className="text-xs font-semibold text-slate-600">
                   Pelajari Selengkapnya di FAQ →

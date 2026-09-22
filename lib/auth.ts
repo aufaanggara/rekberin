@@ -10,6 +10,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  secret: process.env.NEXTAUTH_SECRET || "rekberin_dev_secret_key_12345678901234567890",
   providers: [
     CredentialsProvider({
       name: "Credentials",
