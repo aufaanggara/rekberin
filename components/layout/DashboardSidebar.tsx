@@ -6,11 +6,9 @@ import {
   LayoutDashboard,
   Receipt,
   Package,
-  PlusCircle,
   ShieldCheck,
   Store,
   User,
-  ShoppingBag,
   ArrowLeft,
   Wallet,
   Sparkles,
@@ -54,8 +52,8 @@ const roleConfig = {
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
       { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
   seller: {
@@ -76,8 +74,8 @@ const roleConfig = {
       { href: "/user?tab=seller", label: "Dashboard", icon: LayoutDashboard },
       { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
   admin: {
@@ -118,8 +116,8 @@ const roleConfig = {
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
       { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
 };
@@ -139,10 +137,19 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
         {currentRole.items.map((item) => {
           const isChat = item.href === "/user/chat";
           const isTransactionsHistory = item.href === "/user/transactions";
-          const isDashboard = item.href === "/user" || item.href === "/user?tab=seller";
+          const isWithdraw = item.href.includes("view=withdraw");
+          const isWarranty = item.href.includes("view=warranty");
+          const isDashboard =
+            (item.href === "/user" || item.href === "/user?tab=seller") &&
+            !isWithdraw &&
+            !isWarranty;
 
           let active = false;
-          if (isChat) {
+          if (isWarranty) {
+            active = pathname === "/user" && currentView === "warranty";
+          } else if (isWithdraw) {
+            active = pathname === "/user" && currentView === "withdraw";
+          } else if (isChat) {
             active = pathname === "/user/chat" || pathname.startsWith("/user/transactions/");
           } else if (isTransactionsHistory) {
             active = pathname === "/user/transactions";
