@@ -158,6 +158,10 @@ body {
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
+/* Hide scrollbar utility (touch-friendly horizontal scroll without visible bar) */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* Tag pill (Glints popular tag style) */
 .tag-pill {
   display: inline-flex;

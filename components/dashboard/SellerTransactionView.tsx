@@ -1,145 +1,197 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
-import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { TransactionTimeline } from "@/components/dashboard/TransactionTimeline";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
-import { Avatar } from "@/components/ui/Avatar";
-import { TransactionFeeSummary } from "@/components/dashboard/TransactionFeeSummary";
+import { ProgressiveTransactionTabs } from "@/components/dashboard/ProgressiveTransactionTabs";
+import { NegotiationTabView } from "@/components/dashboard/NegotiationTabView";
+import { RekberTabView } from "@/components/dashboard/RekberTabView";
+import { AmankanAkunTabView } from "@/components/dashboard/AmankanAkunTabView";
+import { DisbursementTabView } from "@/components/dashboard/DisbursementTabView";
+import { FloatingChatJumpButton } from "@/components/dashboard/FloatingChatJumpButton";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
+import type { ChatTabStage } from "@/types";
 
 export function SellerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
   const tx = initialTransaction;
 
+  const getInitialStage = (): ChatTabStage => {
+    if (tx.status === "COMPLETED") {
+      return "DISBURSEMENT";
+    }
+    if (
+      tx.status === "PAYMENT_CONFIRMED" ||
+      tx.status === "IN_HANDOVER" ||
+      tx.status === "PENDING_BUYER_CONFIRM"
+    ) {
+      return "HANDOVER";
+    }
+    if (tx.status === "PENDING_PAYMENT") {
+      return "REKBER";
+    }
+    return "NEGOTIATION";
+  };
+
+  const [activeStage, setActiveStage] = useState<ChatTabStage>(getInitialStage());
+
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col lg:flex-row gap-8">
-      <DashboardSidebar role="user" />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 flex flex-col lg:flex-row gap-8">
+      {/* 🚀 Dynamic Floating Chat Button */}
+      <FloatingChatJumpButton targetId="transaction-chat-section" theme="emerald" />
+
+      <div className="hidden lg:block">
+        <DashboardSidebar role="user" />
+      </div>
       <div className="flex-1 space-y-6">
         {/* Top Header */}
         <div>
-          <Link
-            href="/user/transactions"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 mb-2"
-          >
-            <ArrowLeft size={14} /> Kembali ke Riwayat Transaksi
-          </Link>
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 mb-2">
+            <Link href="/user" className="inline-flex items-center gap-1 hover:text-emerald-700">
+              <ArrowLeft size={14} /> Kembali ke Dashboard
+            </Link>
+            <span className="text-slate-300">/</span>
+            <Link href="/user/transactions" className="text-slate-500 hover:text-slate-700">
+              Riwayat
+            </Link>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="font-display text-2xl font-bold">Transaksi #{tx.id.slice(-4)}</h1>
+              <h1 className="font-display text-xl sm:text-2xl font-bold">
+                Transaksi #{tx.id.startsWith("trx_") ? tx.id.replace("trx_", "TRX-") : tx.id}
+              </h1>
               <p className="text-txt-muted text-xs sm:text-sm">
-                Dibuat pada {new Date(tx.createdAt).toLocaleString("id-ID")}
+                Item: <strong className="text-slate-800">{tx.listing.title}</strong> · {new Date(tx.createdAt).toLocaleString("id-ID")}
               </p>
             </div>
             <StatusBadge status={tx.status} />
           </div>
         </div>
 
-        {/* 3 Column Grid */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Card 1: Penerimaan Dana */}
-          <Card>
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="text-txt-muted text-xs mb-0.5">Item Akun Terjual</p>
-                <p className="font-medium text-slate-900 line-clamp-2">{tx.listing.title}</p>
-              </div>
+        {/* 🌟 4-Stage Progressive Tab Navigation & Timeline Bar */}
+        <ProgressiveTransactionTabs
+          currentStage={activeStage}
+          onSelectStage={setActiveStage}
+          transactionStatus={tx.status}
+          offerStatus="ACCEPTED"
+        />
 
-              <TransactionFeeSummary
+        {/* 🌟 Tab 1: Negosiasi (Side by Side dengan Chat 2 Arah) */}
+        {activeStage === "NEGOTIATION" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <NegotiationTabView
+                listingId={tx.listing.id}
+                originalPrice={tx.price}
+                role="SELLER"
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                otherOffersCount={2}
+                isLocked={activeStage !== "NEGOTIATION"}
+                onProceedToCheckout={() => setActiveStage("REKBER")}
+              />
+            </div>
+            <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="SELLER"
+                defaultUserName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 🌟 Tab 2: Bayar ke Rekber (Side by Side dengan Chat 3 Arah) */}
+        {activeStage === "REKBER" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <RekberTabView
+                transactionId={tx.id}
                 price={tx.price}
                 platformFee={tx.platformFee}
                 adminFee={tx.adminFee}
+                adminName={tx.admin.user.username}
+                adminRole="Admin Rekber Internal"
+                transactionStatus={tx.status}
+                role="SELLER"
+                onMoveToHandover={() => setActiveStage("HANDOVER")}
               />
-
-              <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/70 text-xs text-amber-900 flex items-start gap-2 mt-4">
-                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">Syarat Pencairan Dana</p>
-                  <p className="text-[11px] text-amber-800 mt-0.5">
-                    Mekanisme pencairan belum tersedia pada tahap ini. Halaman hanya menampilkan status dari API.
-                  </p>
-                </div>
-              </div>
             </div>
-          </Card>
-
-          {/* Card 2: Timeline & Checklist Serah Terima */}
-          <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Progres Serah Terima</h3>
-            <TransactionTimeline steps={tx.timeline} />
-
-            <h4 className="font-semibold mt-6 mb-2.5 text-xs uppercase tracking-wider text-slate-500">
-              Checklist untuk Penjual
-            </h4>
-            <div className="space-y-2">
-              {tx.checklist.map((c, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                  <CheckCircle2
-                    size={14}
-                    className={`mt-0.5 shrink-0 ${
-                      c.checked ? "text-emerald-500" : "text-slate-300"
-                    }`}
-                  />
-                  <span className={c.checked ? "line-through text-slate-400" : ""}>{c.label}</span>
-                </div>
-              ))}
+            <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="SELLER"
+                defaultUserName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
             </div>
-          </Card>
+          </div>
+        )}
 
-          {/* Card 3: Pembeli & Admin Escrow */}
-          <Card>
-            <h3 className="font-semibold mb-4 text-sm sm:text-base">Informasi Partner</h3>
-            <div className="space-y-4 text-sm">
-              {/* Buyer */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <p className="text-txt-muted text-[11px] font-semibold uppercase tracking-wider mb-2">
-                  Pembeli Akun
-                </p>
-                <div className="flex items-center gap-3">
-                  <Avatar name={tx.buyer.fullName} size={36} />
-                  <div>
-                    <p className="font-semibold text-slate-900">{tx.buyer.username}</p>
-                    <p className="text-xs text-txt-muted">Nama: {tx.buyer.fullName}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Admin Escrow */}
-              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-amber-800 text-[11px] font-semibold uppercase tracking-wider">
-                    Admin Escrow Bertugas
-                  </p>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 flex items-center gap-1">
-                    <ShieldCheck size={11} /> Escrow
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Avatar name={tx.admin.user.fullName} size={36} />
-                  <div>
-                    <p className="font-semibold text-slate-900">{tx.admin.user.username}</p>
-                    <p className="text-xs text-amber-700">
-                      Waktu aktif: {tx.admin.activeHours ?? "Belum tersedia"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+        {/* 🌟 Tab 3: Amankan Akun (Side by Side dengan Chat 2 Arah Privat) */}
+        {activeStage === "HANDOVER" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <AmankanAkunTabView
+                transactionId={tx.id}
+                role="SELLER"
+                transactionStatus={tx.status}
+                onProceedToDisbursement={() => setActiveStage("DISBURSEMENT")}
+              />
             </div>
-          </Card>
-        </div>
+            <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="SELLER"
+                defaultUserName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
+            </div>
+          </div>
+        )}
 
-        <TransactionChat
-          transactionId={tx.id}
-          transactionStatus={tx.status}
-          defaultRole="SELLER"
-          defaultUserName={tx.listing.seller.username}
-          buyerName={tx.buyer.username}
-          sellerName={tx.listing.seller.username}
-          adminName={tx.admin.user.username}
-        />
+        {/* 🌟 Tab 4: Pencairan Dana & Selesai (Side by Side dengan Chat 3 Arah) */}
+        {activeStage === "DISBURSEMENT" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4">
+              <DisbursementTabView
+                transactionId={tx.id}
+                price={tx.price}
+                sellerName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                adminName={tx.admin.user.username}
+                role="SELLER"
+                transactionStatus={tx.status}
+              />
+            </div>
+            <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
+              <TransactionChat
+                transactionId={tx.id}
+                transactionStatus={tx.status}
+                defaultRole="SELLER"
+                defaultUserName={tx.listing.seller.username}
+                buyerName={tx.buyer.username}
+                sellerName={tx.listing.seller.username}
+                adminName={tx.admin.user.username}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+

@@ -103,15 +103,44 @@ export interface Review {
 
 export type ChatSenderRole = "BUYER" | "SELLER" | "ADMIN";
 
+export type ChatTabStage = "NEGOTIATION" | "REKBER" | "HANDOVER" | "DISBURSEMENT";
+
 export interface ChatMessage {
   id: string;
   transactionId: string;
+  stage?: ChatTabStage;
   senderRole: ChatSenderRole;
   senderName: string;
   message: string;
   timestamp: string;
   attachmentUrl?: string;
   attachmentType?: "IMAGE" | "FILE";
+}
+
+export type OfferStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+
+export interface PriceOffer {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  buyerName: string;
+  sellerId: string;
+  originalPrice: number;
+  offeredPrice: number;
+  notes?: string;
+  status: OfferStatus;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface OtpLogEntry {
+  id: string;
+  transactionId: string;
+  action: "REQUEST" | "SUBMIT";
+  actorRole: ChatSenderRole;
+  actorName: string;
+  codeMasked?: string;
+  timestamp: string;
 }
 
 export interface AccountCredentials {
@@ -124,3 +153,4 @@ export interface AccountCredentials {
 }
 
 export type PaymentMethodType = "QRIS" | "VA_BCA" | "VA_MANDIRI" | "VA_BRI" | "GOPAY";
+

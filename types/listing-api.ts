@@ -48,3 +48,16 @@ export interface CreateListingRequest {
   details: ListingDetailsApi;
   images: string[];
 }
+
+export interface UpdateListingRequest {
+  title?: string;
+  game?: string;
+  price?: number;
+  description?: string;
+  details?: ListingDetailsApi;
+  images?: string[];
+}
+
+export interface UpdateListingStatusRequest {
+  status: "INACTIVE" | "AVAILABLE";
+}

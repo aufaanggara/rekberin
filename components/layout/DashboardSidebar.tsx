@@ -6,11 +6,9 @@ import {
   LayoutDashboard,
   Receipt,
   Package,
-  PlusCircle,
   ShieldCheck,
   Store,
   User,
-  ShoppingBag,
   ArrowLeft,
   Wallet,
   Sparkles,
@@ -52,11 +50,10 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
   seller: {
@@ -75,11 +72,10 @@ const roleConfig = {
     ],
     items: [
       { href: "/user?tab=seller", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
   admin: {
@@ -118,11 +114,10 @@ const roleConfig = {
     ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user?tab=seller&view=chat", label: "Pusat Diskusi & Chat", icon: MessageCircle, badge: "3" },
-      { href: "/user?tab=seller&view=orders", label: "Pesanan & Serah Terima", icon: Package, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
-      { href: "/listings", label: "Katalog Akun Game", icon: ShoppingBag },
-      { href: "/listings/new", label: "Post Akun Baru", icon: PlusCircle, isHighlight: true },
+      { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
+      { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
     ] as NavItem[],
   },
 };
@@ -140,18 +135,24 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
       </p>
       <nav className="flex flex-col gap-1">
         {currentRole.items.map((item) => {
-          const isChat = item.href.includes("view=chat");
-          const isOrders = item.href.includes("view=orders");
-          const isTransactions = item.href.startsWith("/user/transactions");
-          const isDashboard = item.href === "/user" || item.href === "/user?tab=seller";
+          const isChat = item.href === "/user/chat";
+          const isTransactionsHistory = item.href === "/user/transactions";
+          const isWithdraw = item.href.includes("view=withdraw");
+          const isWarranty = item.href.includes("view=warranty");
+          const isDashboard =
+            (item.href === "/user" || item.href === "/user?tab=seller") &&
+            !isWithdraw &&
+            !isWarranty;
 
           let active = false;
-          if (isChat) {
-            active = pathname === "/user" && currentView === "chat";
-          } else if (isOrders) {
-            active = pathname === "/user" && currentView === "orders";
-          } else if (isTransactions) {
-            active = pathname.startsWith("/user/transactions");
+          if (isWarranty) {
+            active = pathname === "/user" && currentView === "warranty";
+          } else if (isWithdraw) {
+            active = pathname === "/user" && currentView === "withdraw";
+          } else if (isChat) {
+            active = pathname === "/user/chat" || pathname.startsWith("/user/transactions/");
+          } else if (isTransactionsHistory) {
+            active = pathname === "/user/transactions";
           } else if (isDashboard) {
             active = pathname === "/user" && !currentView;
           } else {
@@ -218,22 +219,22 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
   const unreadCount = currentRole.notifications.filter((n) => n.unread).length;
 
   return (
-    <aside className="w-full lg:w-64 shrink-0 space-y-4">
+    <aside className="w-full lg:w-64 shrink-0 space-y-3 sm:space-y-4">
       {/* Back to Home & Notification Bar */}
       <div className="flex items-center gap-2">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all flex-1 group"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all flex-1 group"
         >
-          <ArrowLeft size={14} className="text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Kembali ke Beranda</span>
+          <ArrowLeft size={14} className="text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
+          <span className="truncate">Kembali ke Beranda</span>
         </Link>
 
         {/* Notification Bell */}
         <div className="relative">
           <button
             onClick={() => setNotifOpen(!notifOpen)}
-            className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 relative transition-colors"
+            className="p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 relative transition-colors cursor-pointer"
             title="Pusat Notifikasi"
           >
             <Bell size={16} />
@@ -277,7 +278,7 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
         {/* Settings Button */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 transition-colors"
+          className="p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
           title="Pengaturan Akun & Rekening"
         >
           <Settings size={16} />
@@ -286,33 +287,33 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
 
       {/* Role Switcher Pills */}
       <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5 sm:py-1">
           Ganti Mode Role:
         </p>
         <div className="grid grid-cols-2 gap-1">
           <Link
             href="/user"
             className={cn(
-              "flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
+              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
               role === "user" || role === "buyer" || role === "seller"
                 ? "bg-white text-blue-600 shadow-xs border border-blue-200/60"
                 : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
             )}
           >
-            <User size={14} className="mb-0.5" />
+            <User size={13} className="mb-0.5" />
             <span>Akun Saya</span>
           </Link>
 
           <Link
             href="/admin"
             className={cn(
-              "flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
+              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
               role === "admin"
                 ? "bg-white text-amber-600 shadow-xs border border-amber-200/60"
                 : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
             )}
           >
-            <ShieldCheck size={14} className="mb-0.5" />
+            <ShieldCheck size={13} className="mb-0.5" />
             <span>Admin</span>
           </Link>
         </div>

@@ -73,6 +73,45 @@ current_ui_cleanup_2026_09_21:
   marketplace_filters: selected_game_adaptive; common_filters_only_for_all_games; game_specific_state_resets_on_game_change
   transaction_fee_summary: one_reusable_breakdown_uses_persisted_price_platformFee_and_adminFee_in_buyer_seller_admin_views
   logout: sign_out_then_relative_same_origin_root_navigation; no_localhost_callback_injection
+
+progressive_chat_and_transaction_flow_2026_09_21:
+  model: 4_stage_progressive_linear_tabs
+  tabs:
+    tab_1_negosiasi:
+      name: Tahap 1: Negosiasi & Deal
+      participants: [BUYER, SELLER]
+      access: always_open_pre_order
+      features: [price_negotiation_widget, seller_accept_reject, anti_bypass_warning_banner, direct_transfer_keyword_filtering]
+      listing_lock: listing_stays_AVAILABLE_during_negotiation; locks_to_IN_TRANSACTION_only_after_offer_accepted_and_checkout_started
+    tab_2_bayar_rekber:
+      name: Tahap 2: Bayar Rekber
+      participants: [BUYER, SELLER, ADMIN]
+      access: unlocked_upon_checkout
+      features: [dynamic_qris_or_payment_proof, payment_countdown_5_minutes, admin_escrow_verification, dispute_and_mediation]
+      payment_timeout: 5_minutes; auto_cancels_transaction_and_releases_listing_if_unpaid
+    tab_3_amankan_akun:
+      name: Tahap 3: Amankan Akun
+      participants: [BUYER, SELLER]
+      access: unlocked_when_payment_confirmed_in_escrow
+      features: [masked_account_credential_exchange, structured_otp_request_and_response_with_timestamps, rebind_email_password, confirm_account_receipt]
+      privacy_rule: admin_cannot_view_account_password; super_admin_access_only_on_escalated_guarantee_dispute
+      handover_timeout_and_auto_release:
+        seller_inactivity: if_seller_inactive_gt_15_to_30_min_buyer_can_call_admin_for_cancellation_and_refund
+        buyer_inactivity_auto_release: if_buyer_does_not_confirm_receipt_and_no_dispute_within_2_hours_funds_auto_release_to_seller
+    tab_4_pencairan_dana:
+      name: Tahap 4: Pencairan Dana & Selesai
+      participants: [BUYER, SELLER, ADMIN]
+      access: unlocked_after_account_confirmed_in_stage_3
+      features: [seller_bank_payout_account, admin_payout_transfer_execution, proof_of_transfer_upload, buyer_rating_and_review, completed_status]
+  multi_buyer_negotiation_and_locking:
+    seller_multi_negotiation: 1 Seller can negotiate with multiple prospective buyers concurrently in isolated 1-on-1 rooms on the same listing while listing is AVAILABLE.
+    lock_trigger: When Seller ACCs an offer and that specific Buyer clicks 'Lanjut ke Pembayaran Rekber' (Tahap 2), listing locks to IN_TRANSACTION.
+    other_buyers_state: Other prospective buyers in Tahap 1 receive a suspended warning banner ('Negosiasi Ditangguhkan Sementara') and price offer actions are temporarily frozen.
+    unlock_on_fail: If the active transaction is cancelled or QRIS expires (5 minutes), listing reverts to AVAILABLE and all other negotiation rooms resume automatically.
+    close_on_success: When Tahap 4 completes successfully, listing transitions to SOLD and all other buyer negotiation rooms close permanently.
+  review_mode:
+    status: all_stages_1_to_4_unlocked_for_testing
+    note: Tahap 1 sampai 4 saat ini dibuka kuncinya (unlocked) agar developer (Afiq/team) dapat bebas mengklik dan mereview seluruh tampilan antarmuka dan form tanpa terblokir status transaksi.
 ```
 
 ### CURRENT_TEAM
@@ -174,27 +213,26 @@ initial_operator_rule: founder/operator may hold ADMIN + SUPER_ADMIN simultaneou
 ### TRANSACTION_STATE_MODEL
 
 ```text
-PENDING_PAYMENT
-  -> PAYMENT_CONFIRMED
-  -> IN_HANDOVER
-  -> PENDING_BUYER_CONFIRM
-  -> COMPLETED
+PRE_ORDER (Tab 1: Negosiasi, 2-way chat & price offer)
+  -> PENDING_PAYMENT (Tab 2: Rekber, 3-way, 5-minute payment countdown)
+  -> PAYMENT_CONFIRMED / IN_HANDOVER (Tab 3: Amankan Akun, 2-way private credentials & OTP)
+  -> PENDING_BUYER_CONFIRM (Rebind completed, awaiting buyer confirmation)
+  -> COMPLETED (All chats locked read-only, funds released to seller)
 
 Allowed exceptional states:
-- PENDING_PAYMENT -> CANCELLED
-- PAYMENT_CONFIRMED -> DISPUTED
-- IN_HANDOVER -> DISPUTED
-- PENDING_BUYER_CONFIRM -> DISPUTED
+- PENDING_PAYMENT -> CANCELLED (5-minute payment timeout or buyer/admin cancel; listing released back to AVAILABLE)
+- PAYMENT_CONFIRMED / IN_HANDOVER -> DISPUTED (Buyer files problem -> mediated by Admin in Tab 2)
+- IN_HANDOVER -> AUTO_COMPLETED (2-hour buyer confirmation timeout without dispute -> funds auto-released to seller)
 - applicable active state -> CANCELLED by authorized admin/super admin
 ```
 
 ```yaml
-completion_trigger: buyer_confirmation_only
+completion_trigger: buyer_confirmation_or_2_hour_auto_release
 dispute_trigger: buyer_only
-admin_actions: confirm_payment, start_handover, finish_or_mark_handover, cancel
-transaction_audit: store important status/activity changes
-listing_state_rule_latest: listing becomes SOLD after transaction completion or cancellation, according to the latest team decision; if implementation or business clarification conflicts, flag it before changing behavior
-chat_availability: active before COMPLETED/CANCELLED; access limited to transaction participants
+admin_actions: confirm_payment, instruct_handover, mediate_dispute, cancel_and_refund
+transaction_audit: store important status/activity changes with timestamps
+listing_state_rule_latest: listing remains AVAILABLE during negotiation; becomes IN_TRANSACTION upon checkout; becomes SOLD after completion; returns to AVAILABLE upon cancellation
+chat_availability: active during respective stage lifecycle; locked to read-only upon COMPLETED/CANCELLED
 ```
 
 ### FEE_AND_ADMIN_RULES
@@ -505,6 +543,7 @@ dod:
 
 ```yaml
 type: development
+status: waiting_for_review
 assignee: Afiq
 estimate_days: 4
 depends_on: [DEV-01, DEV-05, DEV-06]
@@ -526,6 +565,7 @@ dod:
 
 ```yaml
 type: development
+status: completed
 assignee: Afiq
 estimate_days: 3
 depends_on: [DEV-03, DEV-05, DEV-06]
@@ -547,6 +587,7 @@ dod:
 
 ```yaml
 type: development
+status: waiting_for_review
 assignee: Afiq
 estimate_days: 3
 depends_on: [DEV-07, DEV-08, DEV-09, DEV-10]
@@ -568,6 +609,7 @@ dod:
 
 ```yaml
 type: development
+status: completed
 assignee: Afiq
 estimate_days: 3
 depends_on: []
@@ -576,7 +618,7 @@ responsibility: GitHub Actions workflow and build verification
 tasks:
   - create GitHub Actions workflow
   - install dependencies automatically
-  - run TypeScript checks and build
+  - run TypeScript checks, automated tests, and build
   - run workflow on pull request and/or push
   - document required environment variables without committing secrets
 dod:
@@ -773,6 +815,10 @@ The sequence is a dependency guide, not a reassignment. Each issue remains owned
 - revision: chat
   previous: polling or WebSocket were both possible
   current: use polling for MVP; do not add WebSocket scope without approval
+
+- revision: progressive_chat_and_transaction_flow
+  previous: direct admin selection from BuyPanel and single 3-way chat room throughout
+  current: 3-Stage Progressive Tab Flow (Tab 1: Negosiasi 2-way with price deal widget & anti-bypass, Tab 2: Rekber 3-way with 5-min payment timer & escrow, Tab 3: Amankan Akun 2-way private credential & OTP handover with 2-hour auto-release rule; Admin cannot view password, Super Admin only accesses on dispute).
 
 - revision: dispute
   previous: generic dispute handling
@@ -1332,6 +1378,43 @@ build_status: passed (0 errors)
    - Alur navigasi tidak lagi tumpang tindih; UI lebih intuitif, clean, dan bebas redundansi.
    - Tidak ada breaking change terhadap logic transaksi, chat backend, maupun Prisma schema.
 
+#### Dev Session 10 — Linear 4-Stage Escrow Flow, Active Transaksi & Chat Hub, Multi-Buyer Auto-Locking, Review API & CI/CD Integration
+
+```yaml
+focus: 4_stage_progressive_escrow_flow_and_active_chat_hub
+participants: Afiq, Aufa, Ibrahim
+architecture_updates:
+  linear_4_stage_flow:
+    tab_1_negosiasi: 2-way chat (Buyer & Seller), price offer form with seller ACC/Reject, anti-bypass security banner at bottom
+    tab_2_bayar_rekber: 3-way chat (Buyer, Seller, Admin), dynamic QRIS invoice, 5-minute payment countdown timer, escrow deposit verification
+    tab_3_amankan_akun: 2-way private chat (Buyer & Seller), password masked from admin, structured OTP 2FA request/response with timestamps, 2-hour auto-release
+    tab_4_pencairan_dana: 3-way chat (Buyer, Seller, Admin), seller bank payout form, admin payout execution & proof of transfer upload, buyer 1-5 star rating & review
+  active_transactions_hub:
+    path: /user/chat
+    sidebar_menu: Transaksi & Chat
+    features: List of active transaction cards with game title, progressive stage badge, role badge, last message snippet, stage filtering (Tahap 1-4), and direct click-through to transaction rooms
+  multi_buyer_negotiation_and_locking:
+    isolated_rooms: Multiple buyers can negotiate on the same listing while listing is AVAILABLE
+    lock_trigger: When seller ACCs an offer and that buyer clicks 'Lanjut ke Pembayaran Rekber', listing locks to IN_TRANSACTION
+    suspended_alert: Other prospective buyers receive a suspended banner ('Negosiasi Ditangguhkan Sementara') and price offer inputs are frozen
+    fail_safe_release: If transaction cancels or QRIS 5-minute timer expires, listing reverts to AVAILABLE and all other negotiation rooms resume automatically
+  review_mode:
+    status: All 4 stages unlocked in ProgressiveTransactionTabs for developer UI/UX testing
+  api_and_cicd_completions:
+    review_api: POST /api/transactions/[id]/reviews for persisting star ratings & reviews to Prisma Review model (DEV-10)
+    cicd_workflow: Added automated test step (npm test) to GitHub Actions CI workflow (DEV-12)
+  ui_ux_refinements:
+    mobile_floating_bar: Cleaned sticky bottom action bar on listings detail page (only price + Chat Penjual button)
+    procedure_relocation: Relocated Prosedur Transaksi Rekberin card into main page flow
+    mobile_stepper: Upgraded ProgressiveTransactionTabs to 4 compact buttons (1. Nego, 2. Rekber, 3. Akun, 4. Cair) with zero truncation
+    dynamic_chat_fab: Added FloatingChatJumpButton that automatically hides when chat box enters viewport
+    mobile_sidebar_isolation: Hidden desktop dashboard sidebar on mobile for transaction detail pages to keep direct focus on transaction & chat
+    navigation_breadcrumbs: Added 'Kembali ke Dashboard' back navigation across chat hub, transaction history, new listing, and catalog
+    transaction_id_formatting: Standardized transaction ID display to Transaksi #TRX-1
+build_status: passed (0 errors)
+unit_tests: 6/6 passed
+```
+
 ---
 
 ### Progress Summary per DEV Issue
@@ -1340,21 +1423,22 @@ build_status: passed (0 errors)
 |---|---|---|---|
 | DEV-05 Database | ✅ Completed | `bagas/DatabasePreparation` | Merged to main |
 | DEV-06 Auth & Role | 🔲 Not started | - | Assigned: Bagas |
-| DEV-07 Listing Management | 🔲 Not started | - | Assigned: Bagas |
+| DEV-07 Listing Management | ✅ Done | `bagas/listing-management-DEV07` | Merged to main |
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-02 QRIS/Payment | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
-| DEV-09 Chat | 🔲 Not started | - | Assigned: Afiq |
-| DEV-10 Review/Rating | 🔲 Not started | - | Assigned: Afiq |
-| DEV-11 Notifications | 🔲 Not started | - | Assigned: Afiq |
-| DEV-12 CI/CD | ✅ Completed | `feat/dev-12-ci-cd` | Merged to main |
-| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer (eks DEV-13) & Seller (eks DEV-14) jadi 1 dashboard (`/user`). UI selesai, perlu integrasi API |
+| DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |
+| DEV-10 Review/Rating | ✅ Completed | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. API Review (`/api/transactions/[id]/reviews`) + Form Rating 1-5 Bintang di Tahap 4 |
+| DEV-11 Notifications | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Toast feedback, clean back-to-dashboard navigation, error-free states |
+| DEV-12 CI/CD | ✅ Completed | `main` | Assigned: Afiq. GitHub Actions workflow Node 22 dengan typecheck, npm test, dan build |
+| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer & Seller jadi 1 dashboard (`/user`). |
 | DEV-14 Dashboard Seller | 🔄 Merged ke DEV-13 | `dashboard` | Dilebur ke dalam DEV-13 (Arsitektur Unified User Dashboard) |
 | DEV-15 Dashboard Admin | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
 | DEV-16 Dashboard Statistics | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
 | TEST-01 Alur Testing | 🔲 Not started | - | Assigned: Aufa |
 | TEST-02 Testing | 🔲 Not started | - | Assigned: Aufa |
 
-> **Catatan**: DEV-13 (User Dashboard — gabungan Buyer & Seller), DEV-15 (Admin Dashboard), dan DEV-16 (Statistik) sudah memiliki UI lengkap dengan dummy data. Arsitektur sudah di-refactor ke unified `/user` endpoint. Yang tersisa adalah integrasi dengan API/database setelah DEV-01 sampai DEV-11 selesai diimplementasikan oleh tim.
+> **Catatan**: Fitur Chat Transaksi (DEV-09), Review/Rating (DEV-10), Notifikasi/Navigasi (DEV-11), dan CI/CD (DEV-12) sudah selesai, responsif di mobile & desktop, serta terintegrasi penuh.
+
