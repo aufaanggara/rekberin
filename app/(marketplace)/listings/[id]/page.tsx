@@ -174,6 +174,51 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
 
+            {/* Prosedur Transaksi Card */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-blue-600" /> Prosedur Transaksi Rekberin
+              </h2>
+
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 flex flex-col justify-between">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                      1
+                    </span>
+                    <span className="font-bold text-xs text-blue-900">Negosiasi & Deal</span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                    Klik <strong>Chat Penjual</strong> untuk mendiskusikan kondisi akun dan ajukan harga penawaran final di ruang chat.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-100 flex flex-col justify-between">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-5 h-5 rounded-full bg-amber-600 text-white font-black text-xs flex items-center justify-center">
+                      2
+                    </span>
+                    <span className="font-bold text-xs text-amber-900">Rekber & Escrow</span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                    Setelah tawaran di-ACC penjual, pilih Admin Rekber & bayar aman via QRIS (dana ditahan di escrow).
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-100 flex flex-col justify-between">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                      3
+                    </span>
+                    <span className="font-bold text-xs text-emerald-900">Amankan Akun</span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
+                    Terima data login akun & panduan pengamanan dari admin/penjual, lalu konfirmasi terima akun.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Customer Reviews Section */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs">
               <h2 className="text-sm sm:text-base font-bold text-slate-900 mb-5 flex items-center gap-2">
@@ -208,20 +253,23 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
           {/* Right Sticky Buy Panel (DESKTOP) */}
           <div className="space-y-5 lg:sticky top-24">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                Harga Akun
-              </span>
-              <div className="text-3xl font-black text-blue-600 mb-4">
-                {formatRupiah(listing.price)}
-              </div>
+              {/* Desktop Only: Harga Akun & Tombol Chat */}
+              <div className="hidden lg:block">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  Harga Akun
+                </span>
+                <div className="text-3xl font-black text-blue-600 mb-4">
+                  {formatRupiah(listing.price)}
+                </div>
 
-              {/* Action Button: Beli Sekarang */}
-              <div className="mb-3">
-                <BuyPanel listingId={listing.id} listingStatus={listing.status} />
+                {/* Action Button: Chat Penjual */}
+                <div className="mb-3">
+                  <BuyPanel listingId={listing.id} listingStatus={listing.status} />
+                </div>
               </div>
 
               {/* Seller Profile Summary */}
-              <div className="mt-6 pt-5 border-t border-slate-100">
+              <div className="lg:mt-6 lg:pt-5 lg:border-t lg:border-slate-100">
                 <div className="flex items-center gap-3">
                   <Avatar name={listing.seller.username} size={40} />
                   <div>
@@ -263,18 +311,17 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
       </div>
 
       {/* MOBILE FLOATING STICKY BUY ACTION BAR (HP ONLY) */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-2xl flex items-center justify-between gap-3">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 shadow-2xl flex items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-bold text-slate-400 block uppercase">Harga Akun</span>
-          <span className="text-lg font-black text-blue-600 tracking-tight">
+          <span className="text-[10px] font-bold text-slate-400 block uppercase leading-none">Harga Akun</span>
+          <span className="text-lg font-black text-blue-600 tracking-tight leading-normal">
             {formatRupiah(listing.price)}
           </span>
         </div>
-        <div className="w-48">
-          <BuyPanel listingId={listing.id} listingStatus={listing.status} />
+        <div className="w-44 shrink-0">
+          <BuyPanel listingId={listing.id} listingStatus={listing.status} compact />
         </div>
       </div>
     </div>
-
   );
 }

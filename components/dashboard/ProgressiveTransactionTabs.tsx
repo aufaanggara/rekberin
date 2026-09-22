@@ -110,31 +110,99 @@ export function ProgressiveTransactionTabs({
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4.5 shadow-md text-white">
       {/* Timeline Header Info */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3.5 border-b border-slate-800 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800 text-xs">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-lg bg-blue-600/30 border border-blue-500/40 flex items-center justify-center shrink-0">
             <Clock className="w-3.5 h-3.5 text-blue-400" />
           </div>
-          <span className="font-bold text-slate-200 uppercase tracking-wider text-xs">
-            Timeline Alur Transaksi Rekberin (4 Tahap)
+          <span className="font-bold text-slate-200 uppercase tracking-wider text-[11px] sm:text-xs">
+            Alur Transaksi Rekberin (4 Tahap)
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 text-xs">Tahap Berjalan:</span>
-          <span className="font-bold text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-slate-400 text-[11px] sm:text-xs">Tahap:</span>
+          <span className="font-bold text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
             {currentStage === "NEGOTIATION"
-              ? "Tahap 1: Negosiasi & Deal"
+              ? "1: Negosiasi"
               : currentStage === "REKBER"
-              ? "Tahap 2: Bayar ke Rekber (Escrow)"
+              ? "2: Bayar Rekber (Escrow)"
               : currentStage === "HANDOVER"
-              ? "Tahap 3: Amankan Akun (Privat)"
-              : "Tahap 4: Pencairan Dana & Selesai"}
+              ? "3: Amankan Akun"
+              : "4: Pencairan Dana"}
           </span>
         </div>
       </div>
 
-      {/* 4 Step Interactive Timeline Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      {/* 📱 MOBILE HORIZONTAL STEPPER (< sm) */}
+      <div className="sm:hidden space-y-2.5">
+        <div className="grid grid-cols-4 gap-1.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = currentStage === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                disabled={tab.isLockedState || !tab.isUnlocked}
+                onClick={() => {
+                  if (!tab.isLockedState && tab.isUnlocked) {
+                    onSelectStage(tab.id);
+                  }
+                }}
+                className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all text-center ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50"
+                    : tab.isCompleted
+                    ? "bg-slate-800 text-emerald-400 border border-emerald-500/30"
+                    : tab.isUnlocked
+                    ? "bg-slate-800/60 text-slate-300 border border-slate-700/50"
+                    : "bg-slate-950/40 text-slate-600 border border-slate-800/40 opacity-50"
+                }`}
+              >
+                <div className="mb-1">
+                  {tab.isCompleted ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-bold leading-tight tracking-tight whitespace-nowrap">
+                  {tab.stepNumber}.{" "}
+                  {tab.id === "NEGOTIATION"
+                    ? "Nego"
+                    : tab.id === "REKBER"
+                    ? "Rekber"
+                    : tab.id === "HANDOVER"
+                    ? "Akun"
+                    : "Cair"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Stage Detail in Mobile */}
+        <div className="bg-slate-800/70 border border-slate-700/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
+          <div>
+            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
+              Fokus Tahap Ini:
+            </span>
+            <span className="font-bold text-slate-200 text-xs">
+              {tabs.find((t) => t.id === currentStage)?.label}
+            </span>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {tabs.find((t) => t.id === currentStage)?.description}
+            </p>
+          </div>
+          <span className="px-2 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-lg shrink-0">
+            Aktif
+          </span>
+        </div>
+      </div>
+
+      {/* 💻 DESKTOP & TABLET STEPPER (>= sm) */}
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentStage === tab.id;
@@ -184,7 +252,7 @@ export function ProgressiveTransactionTabs({
                   )}
                 </div>
 
-                <div className="truncate">
+                <div className="min-w-0">
                   <div className="font-bold text-xs sm:text-sm truncate">
                     {tab.label}
                   </div>

@@ -1403,6 +1403,14 @@ architecture_updates:
   api_and_cicd_completions:
     review_api: POST /api/transactions/[id]/reviews for persisting star ratings & reviews to Prisma Review model (DEV-10)
     cicd_workflow: Added automated test step (npm test) to GitHub Actions CI workflow (DEV-12)
+  ui_ux_refinements:
+    mobile_floating_bar: Cleaned sticky bottom action bar on listings detail page (only price + Chat Penjual button)
+    procedure_relocation: Relocated Prosedur Transaksi Rekberin card into main page flow
+    mobile_stepper: Upgraded ProgressiveTransactionTabs to 4 compact buttons (1. Nego, 2. Rekber, 3. Akun, 4. Cair) with zero truncation
+    dynamic_chat_fab: Added FloatingChatJumpButton that automatically hides when chat box enters viewport
+    mobile_sidebar_isolation: Hidden desktop dashboard sidebar on mobile for transaction detail pages to keep direct focus on transaction & chat
+    navigation_breadcrumbs: Added 'Kembali ke Dashboard' back navigation across chat hub, transaction history, new listing, and catalog
+    transaction_id_formatting: Standardized transaction ID display to Transaksi #TRX-1
 build_status: passed (0 errors)
 unit_tests: 6/6 passed
 ```
@@ -1415,21 +1423,22 @@ unit_tests: 6/6 passed
 |---|---|---|---|
 | DEV-05 Database | ✅ Completed | `bagas/DatabasePreparation` | Merged to main |
 | DEV-06 Auth & Role | 🔲 Not started | - | Assigned: Bagas |
-| DEV-07 Listing Management | ✅ Done | - | Assigned: Bagas |
+| DEV-07 Listing Management | ✅ Done | `bagas/listing-management-DEV07` | Merged to main |
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-02 QRIS/Payment | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
-| DEV-09 Chat | 🟡 Waiting for Review | `feat/afiq-chat-transaction-and-review` | Assigned: Afiq. Polling chat, stage-aware, 4-stage side-by-side room integration |
-| DEV-10 Review/Rating | ✅ Completed | `feat/afiq-chat-transaction-and-review` | Assigned: Afiq. API Review (`/api/transactions/[id]/reviews`) + Form Rating 1-5 Bintang di Tahap 4 |
-| DEV-11 Notifications | 🟡 Waiting for Review | `feat/afiq-chat-transaction-and-review` | Assigned: Afiq. Toast Sonner, loading skeleton, empty & multi-buyer suspended alerts |
-| DEV-12 CI/CD | ✅ Completed | `feat/dev-12-ci-cd` | Assigned: Afiq. GitHub Actions workflow dengan typecheck, npm test, dan build |
-| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer (eks DEV-13) & Seller (eks DEV-14) jadi 1 dashboard (`/user`). UI selesai, perlu integrasi API |
+| DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |
+| DEV-10 Review/Rating | ✅ Completed | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. API Review (`/api/transactions/[id]/reviews`) + Form Rating 1-5 Bintang di Tahap 4 |
+| DEV-11 Notifications | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Toast feedback, clean back-to-dashboard navigation, error-free states |
+| DEV-12 CI/CD | ✅ Completed | `main` | Assigned: Afiq. GitHub Actions workflow Node 22 dengan typecheck, npm test, dan build |
+| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer & Seller jadi 1 dashboard (`/user`). |
 | DEV-14 Dashboard Seller | 🔄 Merged ke DEV-13 | `dashboard` | Dilebur ke dalam DEV-13 (Arsitektur Unified User Dashboard) |
 | DEV-15 Dashboard Admin | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
 | DEV-16 Dashboard Statistics | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
 | TEST-01 Alur Testing | 🔲 Not started | - | Assigned: Aufa |
 | TEST-02 Testing | 🔲 Not started | - | Assigned: Aufa |
 
-> **Catatan**: DEV-09 (Chat) dan DEV-11 (Notifikasi) berstatus `Waiting for Review` untuk final review tim/Afiq. DEV-10 (Review/Rating) dan DEV-12 (CI/CD) sudah selesai penuh dan terintegrasi. DEV-13 (User Dashboard), DEV-15 (Admin Dashboard), dan DEV-16 (Statistik) sudah memiliki UI lengkap dan menunggu integrasi database.
+> **Catatan**: Fitur Chat Transaksi (DEV-09), Review/Rating (DEV-10), Notifikasi/Navigasi (DEV-11), dan CI/CD (DEV-12) sudah selesai, responsif di mobile & desktop, serta terintegrasi penuh.
+
