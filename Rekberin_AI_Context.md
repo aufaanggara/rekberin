@@ -121,7 +121,9 @@ progressive_chat_and_transaction_flow_2026_09_21:
 ```yaml
 branch: feat/issue-02-midtrans-qris
 qris_issue: DEV-02
-qris_status: implemented_on_working_tree; sandbox_generation_verified
+qris_status: committed_and_pushed_to_feature_branch; sandbox_generation_verified
+qris_commit: f546d1e
+main_merge_commit: 4ca3a83
 payment_provider: Midtrans
 payment_api: legacy_Core_API
 snap_integration: false
@@ -1496,7 +1498,7 @@ unit_tests: 6/6 passed
 | DEV-07 Listing Management | ✅ Done | `bagas/listing-management-DEV07` | Merged to main |
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
-| DEV-02 QRIS/Payment | ✅ Implemented on working tree; Sandbox verified | `feat/issue-02-midtrans-qris` | Assigned: Ibrahim. Core API QRIS; parser handles provider 404 before first charge; webhook path configured. |
+| DEV-02 QRIS/Payment | ✅ Committed and pushed; Sandbox verified | `feat/issue-02-midtrans-qris` | Assigned: Ibrahim. Commit `f546d1e`; Core API QRIS; parser handles provider 404 before first charge; webhook path configured. |
 | DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |
