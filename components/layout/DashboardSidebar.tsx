@@ -212,22 +212,22 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
   const unreadCount = currentRole.notifications.filter((n) => n.unread).length;
 
   return (
-    <aside className="w-full lg:w-64 shrink-0 space-y-4">
+    <aside className="w-full lg:w-64 shrink-0 space-y-3 sm:space-y-4">
       {/* Back to Home & Notification Bar */}
       <div className="flex items-center gap-2">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all flex-1 group"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all flex-1 group"
         >
-          <ArrowLeft size={14} className="text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Kembali ke Beranda</span>
+          <ArrowLeft size={14} className="text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
+          <span className="truncate">Kembali ke Beranda</span>
         </Link>
 
         {/* Notification Bell */}
         <div className="relative">
           <button
             onClick={() => setNotifOpen(!notifOpen)}
-            className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 relative transition-colors"
+            className="p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 relative transition-colors cursor-pointer"
             title="Pusat Notifikasi"
           >
             <Bell size={16} />
@@ -271,7 +271,7 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
         {/* Settings Button */}
         <button
           onClick={() => setSettingsOpen(true)}
-          className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 transition-colors"
+          className="p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 shadow-xs hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
           title="Pengaturan Akun & Rekening"
         >
           <Settings size={16} />
@@ -280,33 +280,33 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
 
       {/* Role Switcher Pills */}
       <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5 sm:py-1">
           Ganti Mode Role:
         </p>
         <div className="grid grid-cols-2 gap-1">
           <Link
             href="/user"
             className={cn(
-              "flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
+              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
               role === "user" || role === "buyer" || role === "seller"
                 ? "bg-white text-blue-600 shadow-xs border border-blue-200/60"
                 : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
             )}
           >
-            <User size={14} className="mb-0.5" />
+            <User size={13} className="mb-0.5" />
             <span>Akun Saya</span>
           </Link>
 
           <Link
             href="/admin"
             className={cn(
-              "flex flex-col items-center justify-center py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
+              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
               role === "admin"
                 ? "bg-white text-amber-600 shadow-xs border border-amber-200/60"
                 : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
             )}
           >
-            <ShieldCheck size={14} className="mb-0.5" />
+            <ShieldCheck size={13} className="mb-0.5" />
             <span>Admin</span>
           </Link>
         </div>

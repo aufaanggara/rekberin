@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { useTransactions } from "@/hooks/useTransactions";
 import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 import { formatRupiah } from "@/lib/utils";
-import { ArrowRight, Gamepad2, RefreshCw, ShoppingBag, Store, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Gamepad2, RefreshCw, ShoppingBag, Store, Clock, CheckCircle2 } from "lucide-react";
 
 type RoleFilter = "ALL" | "BUYER" | "SELLER";
 type StatusCategoryFilter = "ALL" | "ONGOING" | "COMPLETED";
@@ -102,10 +102,22 @@ export default function UserTransactionsPage() {
   ).length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-8">
-      <DashboardSidebar role="user" />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-8">
+      <div className="hidden lg:block">
+        <DashboardSidebar role="user" />
+      </div>
 
       <div className="flex-1 space-y-6" aria-busy={isLoading || viewerId === undefined}>
+        {/* Top Back Link */}
+        <div>
+          <Link
+            href="/user"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 mb-1"
+          >
+            <ArrowLeft size={14} /> Kembali ke Dashboard
+          </Link>
+        </div>
+
         {/* Header & Filter Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

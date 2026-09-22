@@ -192,28 +192,28 @@ export function TransactionChat({
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[640px]">
+      <div id="transaction-chat-section" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[560px] sm:h-[640px] scroll-mt-20">
         {/* Chat Room Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
+        <div className="bg-slate-900 text-white px-3.5 py-3 sm:p-5 flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <h3 className="font-bold text-base sm:text-lg tracking-tight flex items-center gap-2">
+              <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <h3 className="font-bold text-sm sm:text-base tracking-tight">
                 Room Chat Transaksi (3 Arah)
               </h3>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-[11px] text-slate-300 hidden sm:block mt-0.5">
               Komunikasi terpantau aman antara Pembeli, Penjual, dan Admin Rekber
             </p>
           </div>
 
           {/* Simulasi Ganti Role (Testing Friendly) */}
-          <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 p-1 rounded-xl text-xs">
-            <span className="text-slate-400 px-2 font-medium hidden sm:inline">Kirim sbg:</span>
+          <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 p-0.5 sm:p-1 rounded-xl text-xs">
+            <span className="text-slate-400 px-1.5 font-medium hidden md:inline text-[11px]">Kirim sbg:</span>
             <button
               type="button"
               onClick={() => setActiveRole("BUYER")}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
                 activeRole === "BUYER"
                   ? "bg-blue-600 text-white shadow-xs"
                   : "text-slate-300 hover:text-white"
@@ -224,7 +224,7 @@ export function TransactionChat({
             <button
               type="button"
               onClick={() => setActiveRole("SELLER")}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
                 activeRole === "SELLER"
                   ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-300 hover:text-white"
@@ -235,9 +235,9 @@ export function TransactionChat({
             <button
               type="button"
               onClick={() => setActiveRole("ADMIN")}
-              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 activeRole === "ADMIN"
-                  ? "bg-amber-500 text-slate-950 shadow-xs font-bold"
+                  ? "bg-amber-500 text-slate-950 shadow-xs"
                   : "text-slate-300 hover:text-white"
               }`}
             >
@@ -246,33 +246,25 @@ export function TransactionChat({
           </div>
         </div>
 
-        {/* Participants Sub-header */}
-        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-          <div className="flex items-center gap-1.5 text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="font-semibold text-slate-900">Pembeli:</span>
-            <span>{buyerName}</span>
+        {/* Participants & Escrow Badge Combined Bar */}
+        <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 sm:px-4 sm:py-2 flex flex-wrap items-center justify-between gap-1.5 text-[11px] sm:text-xs">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-1 text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              <span className="font-semibold text-slate-900">Pembeli:</span>
+              <span className="truncate max-w-[80px] sm:max-w-none">{buyerName}</span>
+            </div>
+            <span className="text-slate-300">|</span>
+            <div className="flex items-center gap-1 text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="font-semibold text-slate-900">Penjual:</span>
+              <span className="truncate max-w-[80px] sm:max-w-none">{sellerName}</span>
+            </div>
           </div>
-          <span className="text-slate-300 hidden sm:inline">|</span>
-          <div className="flex items-center gap-1.5 text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-semibold text-slate-900">Penjual:</span>
-            <span>{sellerName}</span>
+          <div className="flex items-center gap-1 text-amber-800 font-semibold bg-amber-100/70 border border-amber-200 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px]">
+            <ShieldCheck size={12} className="text-amber-600" />
+            <span>Escrow: {adminName}</span>
           </div>
-          <span className="text-slate-300 hidden sm:inline">|</span>
-          <div className="flex items-center gap-1.5 text-amber-800 font-semibold bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-md">
-            <ShieldCheck size={13} className="text-amber-600" />
-            <span>Escrow:</span>
-            <span>{adminName}</span>
-          </div>
-        </div>
-
-        {/* Security Tip Banner */}
-        <div className="bg-blue-50/70 border-b border-blue-100 px-4 py-2 flex items-center gap-2 text-[11px] sm:text-xs text-blue-900">
-          <Lock size={13} className="text-blue-600 shrink-0" />
-          <span>
-            <strong>Keamanan Terjamin:</strong> Lampirkan bukti transfer dan screenshot akun di sini untuk rekaman data bersama admin.
-          </span>
         </div>
 
         {/* Chat Messages List */}
@@ -526,17 +518,15 @@ export function TransactionChat({
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isChatClosed || isSending}
-            placeholder={`Kirim pesan atau foto sebagai ${
-              activeRole === "BUYER" ? "Pembeli" : activeRole === "SELLER" ? "Penjual" : "Admin"
-            }...`}
-            className="flex-1 bg-slate-100/80 border border-slate-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-500 transition-all"
+            placeholder="Tulis pesan..."
+            className="flex-1 bg-slate-100/80 border border-slate-200 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-500 transition-all"
           />
           <button
             type="submit"
             disabled={isChatClosed || isSending || (!inputText.trim() && !attachment)}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
           >
-            <Send size={15} />
+            <Send size={14} className="sm:w-[15px] sm:h-[15px]" />
             <span className="hidden sm:inline">Kirim</span>
           </button>
         </form>

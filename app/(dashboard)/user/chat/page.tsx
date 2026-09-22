@@ -13,6 +13,7 @@ import {
   KeyRound,
   Wallet,
   Clock,
+  ArrowLeft,
   ArrowRight,
   Gamepad2,
   CheckCircle2,
@@ -231,10 +232,22 @@ export default function UserChatInboxPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-8">
-      <DashboardSidebar role="user" />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-8">
+      <div className="hidden lg:block">
+        <DashboardSidebar role="user" />
+      </div>
 
       <div className="flex-1 space-y-6">
+        {/* Top Back Link */}
+        <div>
+          <Link
+            href="/user"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 mb-1"
+          >
+            <ArrowLeft size={14} /> Kembali ke Dashboard
+          </Link>
+        </div>
+
         {/* Header Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

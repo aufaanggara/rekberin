@@ -24,6 +24,8 @@ export default function ListingsPage({
           <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 mb-2">
             <Link href="/" className="hover:underline">Beranda</Link>
             <span className="text-slate-300">/</span>
+            <Link href="/user" className="hover:underline">Dashboard</Link>
+            <span className="text-slate-300">/</span>
             <span className="text-slate-700">Marketplace Akun Game</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
