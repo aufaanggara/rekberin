@@ -2,11 +2,11 @@
 // Strategi: Network-first with cache fallback untuk navigasi,
 // Cache-first untuk static assets (JS, CSS, images, fonts).
 
-const CACHE_NAME = "rekberin-v1";
+const CACHE_NAME = "rekberin-v2";
 const OFFLINE_URL = "/offline";
 
 // Static assets to pre-cache on install
-const PRECACHE_ASSETS = ["/icon-192.png", "/icon-512.png"];
+const PRECACHE_ASSETS = ["/", "/offline", "/icon-192.png", "/icon-512.png", "/apple-icon.png"];
 
 // Install: Pre-cache critical assets
 self.addEventListener("install", (event) => {
@@ -16,6 +16,13 @@ self.addEventListener("install", (event) => {
       .then((cache) => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
   );
+});
+
+// Support instant update activation from client
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 // Activate: Clean up old caches

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Landmark,
   Radio,
+  Loader2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -38,7 +39,9 @@ import {
 import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/Button";
-import { dummyTransactions } from "@/data/dummy";
+import { useAdminTransactions } from "@/hooks/useAdminTransactions";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 import { formatRupiah } from "@/lib/utils";
 
 const escrowGrowthData = [
@@ -134,11 +137,19 @@ export default function AdminDashboardPage() {
   const [showBankFeeds, setShowBankFeeds] = useState(false);
   const [bankFeeds, setBankFeeds] = useState<BankFeed[]>(initialBankFeeds);
 
-  const active = dummyTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
-  const pendingPayment = dummyTransactions.filter((t) => t.status === "PENDING_PAYMENT");
-  const pendingConfirm = dummyTransactions.filter((t) => t.status === "PENDING_BUYER_CONFIRM");
-  const completed = dummyTransactions.filter((t) => t.status === "COMPLETED");
-  const totalFee = dummyTransactions.reduce((sum, t) => sum + t.adminFee, 0);
+  // Real data from API
+  const { data: currentUser } = useCurrentUser();
+  const { data: rawTransactions, isLoading, error, refetch } = useAdminTransactions();
+  const transactions = useMemo(
+    () => rawTransactions.map(mapTransactionApiToViewModel),
+    [rawTransactions]
+  );
+
+  const active = transactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
+  const pendingPayment = transactions.filter((t) => t.status === "PENDING_PAYMENT");
+  const pendingConfirm = transactions.filter((t) => t.status === "PENDING_BUYER_CONFIRM");
+  const completed = transactions.filter((t) => t.status === "COMPLETED");
+  const totalFee = transactions.reduce((sum, t) => sum + t.adminFee, 0);
   const totalEscrowHeld = active.reduce((sum, t) => sum + t.price, 0);
 
   const showToast = (msg: string) => {
@@ -162,7 +173,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const filteredTransactions = dummyTransactions.filter((t) => {
+  const filteredTransactions = transactions.filter((t) => {
     if (filter === "PENDING_PAYMENT" && t.status !== "PENDING_PAYMENT") return false;
     if (filter === "PENDING_CONFIRM" && t.status !== "PENDING_BUYER_CONFIRM") return false;
     if (filter === "COMPLETED" && t.status !== "COMPLETED") return false;
@@ -194,7 +205,7 @@ export default function AdminDashboardPage() {
                 <span>Admin Escrow Officer Berlisensi • Rating 4.9★</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                Command Center: Anto Wijaya
+                Command Center: {currentUser?.fullName || currentUser?.username || "Admin Officer"}
               </h1>
               <p className="text-amber-100 text-xs sm:text-sm mt-1 max-w-xl">
                 Pantau dana tertampung di rekening escrow, verifikasi transfer buyer, dan fasilitasi serah terima akun aman.
@@ -436,7 +447,7 @@ export default function AdminDashboardPage() {
                   filter === "ALL" ? "bg-white text-amber-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Semua ({dummyTransactions.length})
+                Semua ({transactions.length})
               </button>
               <button
                 onClick={() => setFilter("PENDING_PAYMENT")}
@@ -553,7 +564,7 @@ export default function AdminDashboardPage() {
                     </div>
                   ) : (
                     <div className="text-right text-xs font-bold text-slate-600">
-                      Sengketa telah diselesaikan oleh Admin Anto.
+                      Sengketa telah diselesaikan oleh Admin {currentUser?.username || "Petugas"}.
                     </div>
                   )}
                 </div>
@@ -596,52 +607,70 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredTransactions.map((t) => (
-                      <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-amber-700">
-                          #{t.id.slice(-6)}
-                        </td>
-                        <td className="py-3.5 px-4 max-w-[200px]">
-                          <div className="font-bold text-slate-800 truncate">{t.listing.title}</div>
-                          <span className="text-[10px] font-bold text-blue-600">{t.listing.game}</span>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="text-slate-700">
-                            B: <span className="font-bold">{t.buyer.username}</span>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-2">
+                            <Loader2 size={24} className="animate-spin text-amber-600" />
+                            <span className="text-slate-500">Memuat transaksi admin...</span>
                           </div>
-                          <div className="text-slate-400 text-[11px]">
-                            S: <span>{t.listing.seller.username}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 font-black text-slate-900">
-                          {formatRupiah(t.price)}
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-emerald-600">
-                          {formatRupiah(t.adminFee)}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <StatusBadge status={t.status} />
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <Link href={`/admin/transactions/${t.id}`}>
-                            <Button
-                              size="sm"
-                              className="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold py-1 px-3"
-                            >
-                              <MessageSquare size={12} className="mr-1" />
-                              Buka Mediasi
-                            </Button>
-                          </Link>
                         </td>
                       </tr>
-                    ))}
-
-                    {filteredTransactions.length === 0 && (
+                    ) : error ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-10">
+                          <p className="text-red-500 mb-2">{error}</p>
+                          <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs">
+                            Coba Lagi
+                          </Button>
+                        </td>
+                      </tr>
+                    ) : filteredTransactions.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="text-center py-10 text-slate-400">
                           Tidak ada transaksi yang cocok dengan filter atau pencarian.
                         </td>
                       </tr>
+                    ) : (
+                      filteredTransactions.map((t) => (
+                        <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3.5 px-4 font-mono font-bold text-amber-700">
+                            #{t.id.slice(-6)}
+                          </td>
+                          <td className="py-3.5 px-4 max-w-[200px]">
+                            <div className="font-bold text-slate-800 truncate">{t.listing.title}</div>
+                            <span className="text-[10px] font-bold text-blue-600">{t.listing.game}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-slate-700">
+                              B: <span className="font-bold">{t.buyer.username}</span>
+                            </div>
+                            <div className="text-slate-400 text-[11px]">
+                              S: <span>{t.listing.seller.username}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-black text-slate-900">
+                            {formatRupiah(t.price)}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-emerald-600">
+                            {formatRupiah(t.adminFee)}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <StatusBadge status={t.status} />
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <Link href={`/admin/transactions/${t.id}`}>
+                              <Button
+                                size="sm"
+                                className="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold py-1 px-3"
+                              >
+                                <MessageSquare size={12} className="mr-1" />
+                                Buka Mediasi
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>

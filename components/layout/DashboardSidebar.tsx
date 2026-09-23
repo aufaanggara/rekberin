@@ -5,25 +5,24 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   Receipt,
-  Package,
   ShieldCheck,
-  Store,
   User,
   ArrowLeft,
   Wallet,
   Sparkles,
-  HelpCircle,
   Bell,
   Settings,
   X,
   CheckCircle2,
-  Clock,
-  ExternalLink,
   MessageCircle,
+  Loader2,
+  ShoppingCart,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import type { LucideIcon } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface NavItem {
   href: string;
@@ -33,24 +32,17 @@ interface NavItem {
   badge?: string;
 }
 
-const roleConfig = {
+// Static role configuration — only UI/color/nav data, NOT user identity
+const roleStaticConfig = {
   buyer: {
     title: "Akun Saya",
     color: "blue",
     badge: "USER Terverifikasi",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-    name: "Dimas Anggara",
-    tag: "@buyer_dimas",
-    balance: "Rp 350.000",
-    balanceLabel: "Saldo Rekber",
     avatarBg: "bg-gradient-to-tr from-blue-600 to-indigo-500",
-    notifications: [
-      { id: "n1", title: "Dana Escrow Ditahan Aman", desc: "Pembayaran Anda untuk akun eFootball telah diamankan Admin Anto.", time: "10 mnt lalu", unread: true },
-      { id: "n2", title: "Garansi Akun Aktif", desc: "Garansi anti-hackback 48 jam untuk pesanan #tx_3 sedang berjalan.", time: "2 jam lalu", unread: false },
-    ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
       { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
@@ -59,20 +51,12 @@ const roleConfig = {
   seller: {
     title: "Toko Penjual",
     color: "emerald",
-    badge: "Star Seller 4.8★",
+    badge: "Penjual Aktif",
     badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    name: "Rian Pratama",
-    tag: "@efootball_seller1",
-    balance: "Rp 2.450.000",
-    balanceLabel: "Saldo Siap Tarik",
     avatarBg: "bg-gradient-to-tr from-emerald-600 to-teal-500",
-    notifications: [
-      { id: "n3", title: "Pesanan Masuk Baru", desc: "Buyer telah mentransfer dana ke escrow. Segera kirim data akun!", time: "5 mnt lalu", unread: true },
-      { id: "n4", title: "Penarikan Dana Berhasil", desc: "Pencairan saldo Rp 1.500.000 ke BCA telah berhasil.", time: "1 hari lalu", unread: false },
-    ],
     items: [
       { href: "/user?tab=seller", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
       { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
@@ -83,15 +67,7 @@ const roleConfig = {
     color: "amber",
     badge: "Official Escrow Officer",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
-    name: "Anto Wijaya",
-    tag: "@rekber_anto",
-    balance: "Rp 4.200.000",
-    balanceLabel: "Dana Escrow Ditahan",
     avatarBg: "bg-gradient-to-tr from-amber-600 to-orange-500",
-    notifications: [
-      { id: "n5", title: "Bukti Transfer Perlu Dicek", desc: "Transaksi #tx_1 mengunggah bukti transfer Rp 865.000.", time: "2 mnt lalu", unread: true },
-      { id: "n6", title: "Laporan Sengketa Baru", desc: "Ada pertanyaan seputar perubahan email Konami ID.", time: "15 mnt lalu", unread: true },
-    ],
     items: [
       { href: "/admin", label: "Overview & Pool", icon: LayoutDashboard },
       { href: "/admin/transactions", label: "Antrean Transaksi", icon: ShieldCheck },
@@ -103,18 +79,10 @@ const roleConfig = {
     color: "blue",
     badge: "USER Terverifikasi",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-    name: "Dimas Anggara",
-    tag: "@buyer_dimas",
-    balance: "Rp 350.000",
-    balanceLabel: "Saldo Rekber",
     avatarBg: "bg-gradient-to-tr from-blue-600 to-indigo-500",
-    notifications: [
-      { id: "n1", title: "Dana Escrow Ditahan Aman", desc: "Pembayaran Anda untuk akun eFootball telah diamankan Admin Anto.", time: "10 mnt lalu", unread: true },
-      { id: "n2", title: "Pesanan Masuk Baru", desc: "Buyer telah mentransfer dana ke escrow. Segera kirim data akun!", time: "5 mnt lalu", unread: true },
-    ],
     items: [
       { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle, badge: "3" },
+      { href: "/user/chat", label: "Transaksi & Chat", icon: MessageCircle },
       { href: "/user/transactions", label: "Riwayat Transaksi", icon: Receipt },
       { href: "/user?tab=seller&view=withdraw", label: "Saldo & Penarikan", icon: Wallet },
       { href: "/user?view=warranty", label: "Panduan Garansi", icon: ShieldCheck },
@@ -123,7 +91,15 @@ const roleConfig = {
 };
 
 // Inner nav component that reads searchParams (needs Suspense)
-function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" | "user"; currentRole: (typeof roleConfig)[keyof typeof roleConfig] }) {
+function SidebarNav({
+  role,
+  currentTab,
+  staticConfig,
+}: {
+  role: "buyer" | "seller" | "admin" | "user";
+  currentTab?: "buyer" | "seller";
+  staticConfig: (typeof roleStaticConfig)[keyof typeof roleStaticConfig];
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentView = searchParams?.get("view");
@@ -131,10 +107,10 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-2 pb-1.5">
-        Menu {currentRole.title}
+        Menu {staticConfig.title}
       </p>
       <nav className="flex flex-col gap-1">
-        {currentRole.items.map((item) => {
+        {staticConfig.items.map((item) => {
           const isChat = item.href === "/user/chat";
           const isTransactionsHistory = item.href === "/user/transactions";
           const isWithdraw = item.href.includes("view=withdraw");
@@ -154,7 +130,16 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
           } else if (isTransactionsHistory) {
             active = pathname === "/user/transactions";
           } else if (isDashboard) {
-            active = pathname === "/user" && !currentView;
+            if (role === "user") {
+              active =
+                pathname === "/user" &&
+                !currentView &&
+                (currentTab === "seller"
+                  ? item.href.includes("tab=seller")
+                  : !item.href.includes("tab=seller"));
+            } else {
+              active = pathname === "/user" && !currentView;
+            }
           } else {
             active =
               pathname === item.href ||
@@ -169,7 +154,7 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
               className={cn(
                 "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all",
                 active
-                  ? role === "seller"
+                  ? currentTab === "seller" || role === "seller"
                     ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/80 shadow-xs"
                     : role === "admin"
                       ? "bg-amber-50 text-amber-800 font-bold border border-amber-200/80 shadow-xs"
@@ -183,7 +168,7 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
                 size={16}
                 className={cn(
                   active
-                    ? role === "seller"
+                    ? currentTab === "seller" || role === "seller"
                       ? "text-emerald-600"
                       : role === "admin"
                         ? "text-amber-600"
@@ -210,13 +195,56 @@ function SidebarNav({ role, currentRole }: { role: "buyer" | "seller" | "admin" 
   );
 }
 
-export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" | "user" }) {
-  const currentRole = roleConfig[role];
+export interface DashboardSidebarProps {
+  role: "buyer" | "seller" | "admin" | "user";
+  activeTab?: "buyer" | "seller";
+  onTabChange?: (tab: "buyer" | "seller") => void;
+  actionRequiredCount?: number;
+  unrepliedCount?: number;
+}
+
+function DashboardSidebarContent({
+  role,
+  activeTab,
+  onTabChange,
+  actionRequiredCount,
+  unrepliedCount,
+}: DashboardSidebarProps) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get("tab");
+  const currentTab = activeTab ?? (tabParam === "seller" ? "seller" : "buyer");
+
+  const effectiveConfig =
+    role === "user"
+      ? currentTab === "seller"
+        ? roleStaticConfig.seller
+        : roleStaticConfig.buyer
+      : roleStaticConfig[role];
+
+  const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
   const [notifOpen, setNotifOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savedSettings, setSavedSettings] = useState(false);
 
-  const unreadCount = currentRole.notifications.filter((n) => n.unread).length;
+  // Derive display values from real user data (with fallback for loading state)
+  const displayName = isUserLoading
+    ? "Memuat..."
+    : currentUser?.fullName ?? "—";
+  const displayTag = isUserLoading
+    ? ""
+    : currentUser?.username ? `@${currentUser.username}` : "—";
+  const displayInitial = displayName && displayName !== "Memuat..." && displayName !== "—"
+    ? displayName[0].toUpperCase()
+    : "?";
+
+  // Badge text
+  const badgeText = role === "admin"
+    ? effectiveConfig.badge
+    : currentTab === "seller"
+      ? "Penjual Aktif"
+      : currentUser?.isVerified
+        ? "Pembeli Terverifikasi"
+        : "Pembeli";
 
   return (
     <aside className="w-full lg:w-64 shrink-0 space-y-3 sm:space-y-4">
@@ -230,7 +258,7 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
           <span className="truncate">Kembali ke Beranda</span>
         </Link>
 
-        {/* Notification Bell */}
+        {/* Notification Bell — notifikasi belum ada model DB, tampilkan kosong */}
         <div className="relative">
           <button
             onClick={() => setNotifOpen(!notifOpen)}
@@ -238,11 +266,6 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
             title="Pusat Notifikasi"
           >
             <Bell size={16} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-black flex items-center justify-center animate-pulse">
-                {unreadCount}
-              </span>
-            )}
           </button>
 
           {/* Notification Dropdown */}
@@ -250,26 +273,15 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
             <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                 <span className="text-xs font-bold text-slate-800">Notifikasi Transaksi</span>
-                <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded-md">
-                  {unreadCount} Baru
-                </span>
+                <button
+                  onClick={() => setNotifOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {currentRole.notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={cn(
-                      "p-2.5 rounded-xl text-xs space-y-0.5 transition-colors",
-                      n.unread ? "bg-blue-50/70 border border-blue-100" : "bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 text-[11px]">{n.title}</span>
-                      <span className="text-[9px] text-slate-400">{n.time}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">{n.desc}</p>
-                  </div>
-                ))}
+              <div className="py-6 text-center text-xs text-slate-400">
+                Belum ada notifikasi.
               </div>
             </div>
           )}
@@ -285,83 +297,110 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
         </button>
       </div>
 
-      {/* Role Switcher Pills */}
-      <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5 sm:py-1">
-          Ganti Mode Role:
-        </p>
-        <div className="grid grid-cols-2 gap-1">
-          <Link
-            href="/user"
-            className={cn(
-              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
-              role === "user" || role === "buyer" || role === "seller"
-                ? "bg-white text-blue-600 shadow-xs border border-blue-200/60"
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
-            )}
-          >
-            <User size={13} className="mb-0.5" />
-            <span>Akun Saya</span>
-          </Link>
+      {/* Switcher Mode: Sebagai Pembeli vs Sebagai Penjual — Dibuat kecil di atas profil */}
+      {role === "user" && (
+        <div className="bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-0.5 sm:py-1">
+            Mode Aktivitas:
+          </p>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => onTabChange?.("buyer")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer",
+                currentTab === "buyer"
+                  ? "bg-white text-blue-600 shadow-xs border border-blue-200/60"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+              )}
+            >
+              <ShoppingCart size={13} className="shrink-0" />
+              <span>Pembeli</span>
+              {(actionRequiredCount ?? 0) > 0 && (
+                <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shrink-0">
+                  {actionRequiredCount}
+                </span>
+              )}
+            </button>
 
-          <Link
-            href="/admin"
-            className={cn(
-              "flex flex-col items-center justify-center py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all",
-              role === "admin"
-                ? "bg-white text-amber-600 shadow-xs border border-amber-200/60"
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
-            )}
-          >
-            <ShieldCheck size={13} className="mb-0.5" />
-            <span>Admin</span>
-          </Link>
+            <button
+              type="button"
+              onClick={() => onTabChange?.("seller")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer",
+                currentTab === "seller"
+                  ? "bg-white text-emerald-600 shadow-xs border border-emerald-200/60"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+              )}
+            >
+              <Store size={13} className="shrink-0" />
+              <span>Penjual</span>
+              {(unrepliedCount ?? 0) > 0 && (
+                <span className="w-4 h-4 bg-purple-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shrink-0">
+                  {unrepliedCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* User Profile & Saldo Card in Sidebar */}
+      {/* Role Admin Badge jika di Dashboard Admin */}
+      {role === "admin" && (
+        <div className="bg-amber-50/80 p-2 rounded-2xl border border-amber-200/60 flex items-center gap-2 text-xs font-bold text-amber-800">
+          <ShieldCheck size={16} className="text-amber-600" />
+          <span>Panel Admin Rekber</span>
+        </div>
+      )}
+
+      {/* User Profile Card — data real dari useCurrentUser */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 relative overflow-hidden">
         <div className="flex items-center gap-3 mb-3">
           <div
             className={cn(
-              "w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-xs shrink-0",
-              currentRole.avatarBg
+              "w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-xs shrink-0 transition-colors",
+              effectiveConfig.avatarBg
             )}
           >
-            {currentRole.name[0]}
+            {isUserLoading ? (
+              <Loader2 size={18} className="animate-spin opacity-70" />
+            ) : (
+              displayInitial
+            )}
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="font-bold text-slate-900 text-sm truncate">{currentRole.name}</h4>
-            <p className="text-xs text-slate-400 truncate">{currentRole.tag}</p>
+            <h4 className="font-bold text-slate-900 text-sm truncate">
+              {displayName}
+            </h4>
+            <p className="text-xs text-slate-400 truncate">{displayTag}</p>
           </div>
         </div>
 
         <div className="mb-3">
           <span
             className={cn(
-              "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border",
-              currentRole.badgeColor
+              "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors",
+              effectiveConfig.badgeColor
             )}
           >
             <Sparkles size={10} />
-            {currentRole.badge}
+            {badgeText}
           </span>
         </div>
 
-        {/* Saldo Snippet */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-slate-400 font-medium block">
-              {currentRole.balanceLabel}
-            </span>
-            <span className="text-sm font-black text-slate-800 tracking-tight">
-              {currentRole.balance}
+        {/* Email snippet */}
+        {!isUserLoading && currentUser?.email && (
+          <div className="pt-3 border-t border-slate-100">
+            <span className="text-[11px] text-slate-400 font-medium block truncate">
+              {currentUser.email}
             </span>
           </div>
-          <div className="p-2 rounded-xl bg-slate-50 text-slate-600 border border-slate-200/70">
-            <Wallet size={15} />
+        )}
+        {isUserLoading && (
+          <div className="pt-3 border-t border-slate-100">
+            <div className="h-3 bg-slate-100 rounded animate-pulse w-32" />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Role Navigation Menu — Suspense boundary for useSearchParams */}
@@ -373,7 +412,7 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
           </div>
         </div>
       }>
-        <SidebarNav role={role} currentRole={currentRole} />
+        <SidebarNav role={role} currentTab={currentTab} staticConfig={effectiveConfig} />
       </Suspense>
 
       {/* Escrow Guarantee Box */}
@@ -432,36 +471,28 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
                   <label className="font-bold text-slate-700 block mb-1">Nama Pemilik Akun</label>
                   <input
                     type="text"
-                    defaultValue={currentRole.name}
+                    defaultValue={currentUser?.fullName ?? ""}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Nomor WhatsApp Notifikasi Transaksi</label>
+                  <label className="font-bold text-slate-700 block mb-1">Username</label>
                   <input
-                    type="tel"
-                    defaultValue="081234567890"
+                    type="text"
+                    defaultValue={currentUser?.username ?? ""}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Rekening Bank Utama (Pencairan Saldo)</label>
-                  <div className="grid grid-cols-3 gap-2 mb-2">
-                    <input
-                      type="text"
-                      defaultValue="BCA"
-                      className="px-3 py-2 rounded-xl border border-slate-200 text-center font-bold"
-                      readOnly
-                    />
-                    <input
-                      type="text"
-                      defaultValue="8920192819"
-                      className="col-span-2 px-3 py-2 rounded-xl border border-slate-200"
-                      required
-                    />
-                  </div>
+                  <label className="font-bold text-slate-700 block mb-1">Email</label>
+                  <input
+                    type="email"
+                    defaultValue={currentUser?.email ?? ""}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600"
+                    readOnly
+                  />
                 </div>
                 <div className="pt-2">
                   <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2">
@@ -474,5 +505,32 @@ export function DashboardSidebar({ role }: { role: "buyer" | "seller" | "admin" 
         </div>
       )}
     </aside>
+  );
+}
+
+export function DashboardSidebar(props: DashboardSidebarProps) {
+  return (
+    <Suspense
+      fallback={
+        <aside className="w-full lg:w-72 shrink-0 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 animate-pulse">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-slate-200 rounded-xl" />
+              <div className="space-y-1.5 flex-1">
+                <div className="h-4 bg-slate-200 rounded w-2/3" />
+                <div className="h-3 bg-slate-100 rounded w-1/2" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-9 bg-slate-100 rounded-xl" />
+              <div className="h-9 bg-slate-100 rounded-xl" />
+              <div className="h-9 bg-slate-100 rounded-xl" />
+            </div>
+          </div>
+        </aside>
+      }
+    >
+      <DashboardSidebarContent {...props} />
+    </Suspense>
   );
 }

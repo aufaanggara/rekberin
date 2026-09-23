@@ -6,6 +6,7 @@ export interface TransactionViewModel {
     id: string;
     title: string;
     game: string;
+    images?: string[];
     seller: UserProfile;
   };
   buyer: UserProfile;

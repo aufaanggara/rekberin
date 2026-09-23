@@ -5,9 +5,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { formatRupiah } from "@/lib/utils";
 import type { Transaction } from "@/types";
+import type { TransactionViewModel } from "@/types/transaction-view-model";
 
 interface InvoiceModalProps {
-  transaction: Transaction;
+  transaction: Transaction | TransactionViewModel;
   onClose: () => void;
 }
 
