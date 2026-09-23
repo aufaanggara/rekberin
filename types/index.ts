@@ -153,4 +153,3 @@ export interface AccountCredentials {
 }
 
 export type PaymentMethodType = "QRIS" | "VA_BCA" | "VA_MANDIRI" | "VA_BRI" | "GOPAY";
-

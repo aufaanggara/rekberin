@@ -56,7 +56,19 @@ async function login(baseUrl: string, email: string, password: string, expectSuc
     assert.ok(![200, 302].includes(callbackResponse.status));
   }
   const sessionResponse = await request(baseUrl, jar, "/api/auth/session");
-  return { jar, session: (await sessionResponse.json()) as { user?: { id?: string; role?: string; email?: string } } };
+  return {
+    jar,
+    session: (await sessionResponse.json()) as {
+      user?: {
+        id?: string;
+        role?: string;
+        email?: string;
+        name?: string;
+        username?: string;
+        isVerified?: boolean;
+      };
+    },
+  };
 }
 
 async function waitForServer(baseUrl: string, server: ChildProcess) {
@@ -122,6 +134,16 @@ async function main() {
     assert.equal(user.session.user?.email, email);
     assert.ok(user.session.user?.id);
     assert.equal(user.session.user?.role, "USER");
+    assert.equal(user.session.user?.name, "DEV 06 User");
+    assert.equal(user.session.user?.username, username);
+    assert.equal(user.session.user?.isVerified, false);
+
+    const userDashboard = await request(baseUrl, user.jar, "/user");
+    assert.equal(userDashboard.status, 200);
+    const userDashboardHtml = await userDashboard.text();
+    assert.match(userDashboardHtml, /DEV 06 User/);
+    assert.match(userDashboardHtml, new RegExp(username));
+    assert.doesNotMatch(userDashboardHtml, /Dimas Anggara/);
 
     const anonymousTransactions = await fetch(`${baseUrl}/api/transactions`);
     assert.equal(anonymousTransactions.status, 401);

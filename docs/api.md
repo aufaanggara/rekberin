@@ -18,7 +18,18 @@ Semua response sukses memakai JSON. Pesan error utama memakai bentuk `{ "error":
 | `GET /api/transactions/[id]/messages` | Session peserta | Daftar pesan, default maksimal 50 |
 | `POST /api/transactions/[id]/messages` | Session peserta | Menyimpan pesan 1-2000 karakter |
 
-Belum ada endpoint `PATCH`/`POST` untuk mengubah status transaksi setelah dibuat, upload bukti pembayaran, QRIS, vault, dispute, review, atau mutation listing.
+Belum ada endpoint `PATCH`/`POST` untuk mengubah status transaksi setelah dibuat, upload bukti pembayaran, vault, dispute, review, atau mutation listing.
+
+Issue 02 menambahkan payment QRIS Midtrans Sandbox dengan otorisasi buyer transaksi:
+
+| Method | Route | Akses | Keterangan |
+|---|---|---|---|
+| `POST` | `/api/transactions/[id]/payment` | Buyer transaksi | Buat atau pulihkan satu QRIS payment dari nominal server |
+| `GET` | `/api/transactions/[id]/payment` | Buyer transaksi | Baca QR, amount, expiry, dan status payment |
+| `POST` | `/api/transactions/[id]/payment/sync` | Buyer transaksi | Ambil status Core API dan rekonsiliasi |
+| `POST` | `/api/webhooks/midtrans` | Midtrans public webhook | Verifikasi SHA-512 lalu rekonsiliasi status |
+
+Seller, admin, dan non-participant tetap hanya membaca `Transaction.status`; mereka tidak menerima DTO payment atau QR identity.
 
 ## Auth register
 

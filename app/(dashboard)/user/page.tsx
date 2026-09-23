@@ -50,7 +50,7 @@ import {
   Pencil,
   Loader2,
 } from "lucide-react";
-import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
+import { MainUserDashboardSidebar } from "@/components/layout/MainUserDashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { InvoiceModal } from "@/components/dashboard/InvoiceModal";
@@ -347,7 +347,7 @@ function UserDashboardContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
-      <DashboardSidebar role="user" />
+      <MainUserDashboardSidebar role="user" />
 
       <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
 

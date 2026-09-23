@@ -128,6 +128,13 @@ export function isSuccessfulListingClaim(count: number) {
   return count === 1;
 }
 
+// Supabase's pooled connection can add a few seconds of latency while the
+// listing claim and transaction record are committed atomically.
+const TRANSACTION_CREATE_OPTIONS = {
+  maxWait: 15_000,
+  timeout: 30_000,
+} as const;
+
 export async function createTransactionForBuyer(input: {
   buyer: { id: string; role: Role };
   listingId: string;
@@ -191,7 +198,7 @@ export async function createTransactionForBuyer(input: {
       },
       include: transactionInclude,
     });
-  });
+  }, TRANSACTION_CREATE_OPTIONS);
 }
 
 function toApiUser(user: {

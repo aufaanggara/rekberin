@@ -41,6 +41,9 @@ export const authOptions: NextAuthOptions = {
           email: dbUser.email,
           name: dbUser.fullName,
           role: dbUser.role,
+          username: dbUser.username,
+          avatarUrl: dbUser.avatarUrl,
+          isVerified: dbUser.isVerified,
         } as any;
       },
     }),
@@ -56,8 +59,34 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = (token as any).userId ?? token.sub;
+        const userId = (token as any).userId ?? token.sub;
+        (session.user as any).id = userId;
         (session.user as any).role = token.role;
+
+        // Keep account identity in the session aligned with the database so
+        // existing JWT sessions also receive username/verification updates.
+        if (typeof userId === "string") {
+          const databaseUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              email: true,
+              username: true,
+              fullName: true,
+              avatarUrl: true,
+              role: true,
+              isVerified: true,
+            },
+          });
+
+          if (databaseUser) {
+            session.user.email = databaseUser.email;
+            session.user.name = databaseUser.fullName;
+            session.user.image = databaseUser.avatarUrl;
+            (session.user as any).username = databaseUser.username;
+            (session.user as any).role = databaseUser.role;
+            (session.user as any).isVerified = databaseUser.isVerified;
+          }
+        }
       }
       return session;
     },
