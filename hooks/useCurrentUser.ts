@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { getApiErrorMessage, readJsonResponse } from "@/lib/transaction-api-client";
 
@@ -15,13 +16,14 @@ export interface CurrentUser {
   createdAt: string;
 }
 
-export function useCurrentUser() {
+function useCurrentUserRequest(enabled: boolean) {
   const { data: session, status } = useSession();
   const [data, setData] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
+    if (!enabled) return;
     if (status === "loading") return;
     if (status === "unauthenticated") {
       setData(null);
@@ -51,11 +53,24 @@ export function useCurrentUser() {
     } finally {
       setIsLoading(false);
     }
-  }, [status]);
+  }, [enabled, status]);
 
   useEffect(() => {
-    void refetch();
-  }, [refetch]);
+    if (enabled) void refetch();
+  }, [enabled, refetch]);
 
   return { data, isLoading, error, refetch, session };
+}
+
+const CurrentUserContext = createContext<ReturnType<typeof useCurrentUserRequest> | null>(null);
+
+export function CurrentUserProvider({ children }: { children: ReactNode }) {
+  const currentUser = useCurrentUserRequest(true);
+  return createElement(CurrentUserContext.Provider, { value: currentUser }, children);
+}
+
+export function useCurrentUser() {
+  const shared = useContext(CurrentUserContext);
+  const standalone = useCurrentUserRequest(shared === null);
+  return shared ?? standalone;
 }

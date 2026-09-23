@@ -51,7 +51,7 @@ import {
   Pencil,
   Loader2,
 } from "lucide-react";
-import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
+import { useUserSidebarBadges } from "@/components/layout/UserDashboardShell";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { InvoiceModal } from "@/components/dashboard/InvoiceModal";
@@ -434,17 +434,10 @@ function UserDashboardContent() {
 
   const selectedInquiry = inquiries.find((i) => i.id === selectedInquiryId) || inquiries[0];
   const unrepliedInquiriesCount = inquiries.filter((i) => !i.replied).length;
+  useUserSidebarBadges(actionRequiredCount, unrepliedInquiriesCount);
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
-      <DashboardSidebar
-        role="user"
-        activeTab={activeTab}
-        onTabChange={navigateDashboard}
-        actionRequiredCount={actionRequiredCount}
-        unrepliedCount={inquiries.filter((i) => !i.replied).length}
-      />
-
+    <div className="min-w-0 flex-1">
       <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
 
         {/* ══════════════════════════════════════════════════════════════════════
