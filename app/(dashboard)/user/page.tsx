@@ -10,8 +10,8 @@
  *   - "Sebagai Penjual" → listing, pesanan masuk, tarik saldo
  */
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingCart,
@@ -27,6 +27,7 @@ import {
   Sparkles,
   Heart,
   Printer,
+  Receipt,
   Eye,
   EyeOff,
   Copy,
@@ -54,12 +55,16 @@ import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { InvoiceModal } from "@/components/dashboard/InvoiceModal";
-import { dummyTransactions, dummyListings } from "@/data/dummy";
+import { dummyListings } from "@/data/dummy";
 import { formatRupiah } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
-import { useMyListings, updateListingStatus } from "@/hooks/useListings";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useListings, useMyListings, updateListingStatus } from "@/hooks/useListings";
+import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 import { toast } from "sonner";
-import type { Transaction, Listing } from "@/types";
+import type { Listing } from "@/types";
+import type { TransactionViewModel } from "@/types/transaction-view-model";
 
 type ActiveTab = "buyer" | "seller";
 type FilterTab = "ALL" | "ACTION_NEEDED" | "IN_PROGRESS" | "COMPLETED" | "WISHLIST";
@@ -184,6 +189,7 @@ const quickReplies = [
 ];
 
 function UserDashboardContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ActiveTab>("buyer");
   const [buyerView, setBuyerView] = useState<"overview" | "warranty">("overview");
@@ -193,9 +199,7 @@ function UserDashboardContent() {
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     const viewParam = searchParams.get("view");
-    if (tabParam === "seller" || tabParam === "buyer") {
-      setActiveTab(tabParam);
-    }
+    setActiveTab(tabParam === "seller" ? "seller" : "buyer");
     if (viewParam === "warranty") {
       setActiveTab("buyer");
       setBuyerView("warranty");
@@ -205,24 +209,42 @@ function UserDashboardContent() {
     if (viewParam === "withdraw") {
       setActiveTab("seller");
       setSellerView("withdraw");
-    } else if (viewParam === "chat" || viewParam === "orders" || viewParam === "overview") {
+    } else if (viewParam === "chat" || viewParam === "orders") {
+      setActiveTab("seller");
       setSellerView(viewParam);
-    } else if (!viewParam) {
+    } else {
       setSellerView("overview");
     }
   }, [searchParams]);
 
+  const navigateDashboard = (tab: ActiveTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("view");
+    if (tab === "seller") {
+      params.set("tab", "seller");
+    } else {
+      params.delete("tab");
+    }
+    setActiveTab(tab);
+    setBuyerView("overview");
+    setSellerView("overview");
+    const query = params.toString();
+    router.push(`/user${query ? `?${query}` : ""}`);
+  };
+
   // ── Buyer state ──────────────────────────────────────────────────────────────
   const [filter, setFilter] = useState<FilterTab>("ALL");
-  const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null);
-  const [selectedInvoiceTx, setSelectedInvoiceTx] = useState<Transaction | null>(null);
-  const [claimModalTx, setClaimModalTx] = useState<Transaction | null>(null);
+  const [buyerSearchQuery, setBuyerSearchQuery] = useState("");
+  const [selectedDetailTx, setSelectedDetailTx] = useState<TransactionViewModel | null>(null);
+  const [selectedInvoiceTx, setSelectedInvoiceTx] = useState<TransactionViewModel | null>(null);
+  const [claimModalTx, setClaimModalTx] = useState<TransactionViewModel | null>(null);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<string[]>(["lst_1", "lst_2"]);
   const [isWarrantyGuideOpen, setIsWarrantyGuideOpen] = useState(false);
 
   // ── Seller state ─────────────────────────────────────────────────────────────
   const [listingFilter, setListingFilter] = useState<"ALL" | "AVAILABLE" | "INACTIVE" | "SOLD">("ALL");
+  const [sellerListingSearch, setSellerListingSearch] = useState("");
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [withdrawContext, setWithdrawContext] = useState<"buyer" | "seller">("buyer");
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
@@ -238,30 +260,90 @@ function UserDashboardContent() {
   const [selectedInquiryId, setSelectedInquiryId] = useState<string>("inq_1");
   const [mobileInquiryView, setMobileInquiryView] = useState<"list" | "chat">("list");
 
-  // Fetch seller's own listings from API
+  // Fetch real user & listings & transactions from API
+  const { data: currentUser, isLoading: isUserLoading, error: userError, refetch: refetchUser } = useCurrentUser();
+  const { data: rawTransactions, isLoading: isTxLoading, error: txError, refetch: refetchTransactions } = useTransactions();
+  const { data: allMarketListings } = useListings();
   const { data: apiMyListings, isLoading: isMyListingsLoading, error: myListingsError, refetch: refetchMyListings } = useMyListings();
   const myListings = apiMyListings;
 
+  const transactions = useMemo(
+    () => rawTransactions.map(mapTransactionApiToViewModel),
+    [rawTransactions]
+  );
+
   // ── Derived data ─────────────────────────────────────────────────────────────
-  const activeTx = dummyTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
-  const completedTx = dummyTransactions.filter((t) => t.status === "COMPLETED");
-  const actionRequiredCount = dummyTransactions.filter(
+  const buyerTransactions = useMemo(() => {
+    if (!currentUser?.id) return [];
+    return transactions.filter((t) => t.buyer.id === currentUser.id);
+  }, [transactions, currentUser?.id]);
+
+  const activeTx = buyerTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
+  const completedTx = buyerTransactions.filter((t) => t.status === "COMPLETED");
+  const inProgressTx = buyerTransactions.filter(
+    (t) => !["COMPLETED", "CANCELLED", "PENDING_PAYMENT"].includes(t.status)
+  );
+  const actionRequiredCount = buyerTransactions.filter(
     (t) => t.status === "PENDING_PAYMENT" || t.status === "PENDING_BUYER_CONFIRM"
   ).length;
-  const wishlistListings = dummyListings.filter((l) => wishlistIds.includes(l.id));
+
+  const listingsSource = allMarketListings.length > 0 ? allMarketListings : dummyListings;
+  const wishlistListings = useMemo(() => {
+    const base = listingsSource.filter((l) => wishlistIds.includes(l.id));
+    if (!buyerSearchQuery.trim()) return base;
+    const q = buyerSearchQuery.toLowerCase();
+    return base.filter(
+      (l) =>
+        l.title.toLowerCase().includes(q) ||
+        l.game.toLowerCase().includes(q) ||
+        l.seller.username.toLowerCase().includes(q)
+    );
+  }, [listingsSource, wishlistIds, buyerSearchQuery]);
+
   const activeListings = myListings.filter((l) => l.status === "AVAILABLE");
   const inactiveListings = myListings.filter((l) => l.status === "INACTIVE");
   const soldListings = myListings.filter((l) => l.status === "SOLD");
-  const activeOrders = dummyTransactions.filter((t) => !["COMPLETED", "CANCELLED"].includes(t.status));
+
+  const activeOrders = useMemo(() => {
+    if (!currentUser?.id) return [];
+    return transactions.filter(
+      (t) => t.listing.seller.id === currentUser.id && !["COMPLETED", "CANCELLED"].includes(t.status)
+    );
+  }, [transactions, currentUser?.id]);
+
   const filteredSellerListings = myListings.filter((l) => {
-    if (listingFilter === "ALL") return true;
-    return l.status === listingFilter;
+    if (listingFilter !== "ALL" && l.status !== listingFilter) return false;
+    if (sellerListingSearch.trim()) {
+      const q = sellerListingSearch.toLowerCase();
+      return (
+        l.id.toLowerCase().includes(q) ||
+        l.title.toLowerCase().includes(q) ||
+        l.game.toLowerCase().includes(q)
+      );
+    }
+    return true;
   });
-  const filteredTransactions = dummyTransactions.filter((t) => {
-    if (filter === "ALL") return true;
-    if (filter === "ACTION_NEEDED") return t.status === "PENDING_PAYMENT" || t.status === "PENDING_BUYER_CONFIRM";
-    if (filter === "IN_PROGRESS") return !["COMPLETED", "CANCELLED", "PENDING_PAYMENT"].includes(t.status);
-    if (filter === "COMPLETED") return t.status === "COMPLETED";
+
+  const filteredTransactions = buyerTransactions.filter((t) => {
+    if (filter === "ACTION_NEEDED" && !(t.status === "PENDING_PAYMENT" || t.status === "PENDING_BUYER_CONFIRM")) {
+      return false;
+    }
+    if (filter === "IN_PROGRESS" && ["COMPLETED", "CANCELLED", "PENDING_PAYMENT"].includes(t.status)) {
+      return false;
+    }
+    if (filter === "COMPLETED" && t.status !== "COMPLETED") {
+      return false;
+    }
+
+    if (buyerSearchQuery.trim()) {
+      const q = buyerSearchQuery.toLowerCase();
+      return (
+        t.id.toLowerCase().includes(q) ||
+        t.listing.title.toLowerCase().includes(q) ||
+        t.listing.game.toLowerCase().includes(q) ||
+        t.listing.seller.username.toLowerCase().includes(q)
+      );
+    }
     return true;
   });
 
@@ -311,7 +393,15 @@ function UserDashboardContent() {
     if (!text) return;
     const targetInq = inquiries.find((i) => i.id === inqId);
     if (targetInq?.transactionId) {
-      addChatMessage(targetInq.transactionId, "SELLER", "Rian Pratama", `[Dari Diskusi Listing]: ${text}`, undefined, undefined, true);
+      addChatMessage(
+        targetInq.transactionId,
+        "SELLER",
+        currentUser?.fullName || currentUser?.username || "Penjual",
+        `[Dari Diskusi Listing]: ${text}`,
+        undefined,
+        undefined,
+        true
+      );
     }
     setInquiries((prev) =>
       prev.map((inq) =>
@@ -347,43 +437,15 @@ function UserDashboardContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
-      <DashboardSidebar role="user" />
+      <DashboardSidebar
+        role="user"
+        activeTab={activeTab}
+        onTabChange={navigateDashboard}
+        actionRequiredCount={actionRequiredCount}
+        unrepliedCount={inquiries.filter((i) => !i.replied).length}
+      />
 
       <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
-
-        {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-1 sm:p-1.5 flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab("buyer")}
-            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "buyer"
-                ? "bg-blue-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-          >
-            <ShoppingCart size={15} className="shrink-0" />
-            <span className="truncate">Sebagai Pembeli</span>
-            {actionRequiredCount > 0 && activeTab !== "buyer" && (
-              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-amber-500 text-white rounded-full text-[9px] sm:text-[10px] font-black flex items-center justify-center shrink-0">
-                {actionRequiredCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("seller")}
-            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === "seller"
-                ? "bg-emerald-600 text-white shadow-md"
-                : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-          >
-            <Store size={15} className="shrink-0" />
-            <span className="truncate">Sebagai Penjual</span>
-            {inquiries.filter(i => !i.replied).length > 0 && activeTab !== "seller" && (
-              <span className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 text-white rounded-full text-[9px] sm:text-[10px] font-black flex items-center justify-center shrink-0">
-                {inquiries.filter(i => !i.replied).length}
-              </span>
-            )}
-          </button>
-        </div>
 
         {/* ══════════════════════════════════════════════════════════════════════
             TAB: SEBAGAI PEMBELI
@@ -394,7 +456,7 @@ function UserDashboardContent() {
               <div className="space-y-5 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
-                    onClick={() => setBuyerView("overview")}
+                    onClick={() => navigateDashboard("buyer")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -526,27 +588,174 @@ function UserDashboardContent() {
               </div>
             ) : (
               <>
-                {/* Transactions List */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                  <div className="p-3.5 sm:p-5 border-b border-slate-100 flex flex-col gap-2.5 sm:gap-3">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900">
-                      {filter === "WISHLIST" ? "Daftar Akun Game Disimpan (Wishlist)" : "Daftar Transaksi Pembelian"}
-                    </h2>
-                    <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto scrollbar-none">
-                      {(["ALL", "ACTION_NEEDED", "IN_PROGRESS", "COMPLETED", "WISHLIST"] as FilterTab[]).map((f) => (
+                {/* Transactions List with Premium Design */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                  {/* Top Header Banner */}
+                  <div className="p-4 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50/90 via-white to-blue-50/30">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Title & Icon Area */}
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+                          {filter === "WISHLIST" ? (
+                            <Heart size={22} className="fill-current text-rose-200" />
+                          ) : (
+                            <ShoppingCart size={22} className="stroke-[2.2]" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                              {filter === "WISHLIST"
+                                ? "Koleksi Akun Impian (Wishlist)"
+                                : "Daftar Transaksi Pembelian"}
+                            </h2>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 tracking-wider">
+                              Escrow Active
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {filter === "WISHLIST"
+                              ? "Daftar akun game favorit yang Anda simpan untuk dipantau atau dibeli nanti."
+                              : "Pantau alur escrow rekber, konfirmasi serah terima akun, dan klaim garansi perlindungan dana."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Actions: Quick Search */}
+                      <div className="w-full sm:w-72">
+                        <div className="relative w-full">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            value={buyerSearchQuery}
+                            onChange={(e) => setBuyerSearchQuery(e.target.value)}
+                            placeholder={filter === "WISHLIST" ? "Cari wishlist game..." : "Cari ID transaksi, game, seller..."}
+                            className="w-full text-xs pl-9 pr-7 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400"
+                          />
+                          {buyerSearchQuery && (
+                            <button
+                              onClick={() => setBuyerSearchQuery("")}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-0.5"
+                              title="Hapus pencarian"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filter Tabs Navigation (Segmented Controls) */}
+                    <div className="mt-4 pt-4 border-t border-slate-100/80 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+                      <div className="inline-flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 shrink-0">
+                        {/* Tab: SEMUA */}
                         <button
-                          key={f}
-                          onClick={() => setFilter(f)}
-                          className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 ${filter === f ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
-                            }`}
+                          onClick={() => setFilter("ALL")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            filter === "ALL"
+                              ? "bg-white text-blue-700 shadow-xs border border-blue-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
                         >
-                          {f === "ALL" && `Semua (${dummyTransactions.length})`}
-                          {f === "ACTION_NEEDED" && `Perlu Tindakan (${actionRequiredCount})`}
-                          {f === "IN_PROGRESS" && "Diproses"}
-                          {f === "COMPLETED" && `Selesai (${completedTx.length})`}
-                          {f === "WISHLIST" && `♥ Wishlist (${wishlistIds.length})`}
+                          <Receipt size={14} className={filter === "ALL" ? "text-blue-600" : "text-slate-400"} />
+                          <span>Semua</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                              filter === "ALL" ? "bg-blue-100 text-blue-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {buyerTransactions.length}
+                          </span>
                         </button>
-                      ))}
+
+                        {/* Tab: PERLU TINDAKAN */}
+                        <button
+                          onClick={() => setFilter("ACTION_NEEDED")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            filter === "ACTION_NEEDED"
+                              ? "bg-white text-amber-700 shadow-xs border border-amber-300 ring-2 ring-amber-400/20"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <AlertCircle
+                            size={14}
+                            className={actionRequiredCount > 0 ? "text-amber-500 animate-pulse" : "text-slate-400"}
+                          />
+                          <span>Perlu Tindakan</span>
+                          {actionRequiredCount > 0 ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black bg-amber-500 text-white animate-pulse">
+                              {actionRequiredCount}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-slate-200/80 text-slate-500">
+                              0
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Tab: DIPROSES */}
+                        <button
+                          onClick={() => setFilter("IN_PROGRESS")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            filter === "IN_PROGRESS"
+                              ? "bg-white text-indigo-700 shadow-xs border border-indigo-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <Clock size={14} className={filter === "IN_PROGRESS" ? "text-indigo-600" : "text-slate-400"} />
+                          <span>Diproses</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              filter === "IN_PROGRESS" ? "bg-indigo-100 text-indigo-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {inProgressTx.length}
+                          </span>
+                        </button>
+
+                        {/* Tab: SELESAI */}
+                        <button
+                          onClick={() => setFilter("COMPLETED")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            filter === "COMPLETED"
+                              ? "bg-white text-emerald-700 shadow-xs border border-emerald-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <CheckCircle2 size={14} className={filter === "COMPLETED" ? "text-emerald-600" : "text-slate-400"} />
+                          <span>Selesai</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              filter === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {completedTx.length}
+                          </span>
+                        </button>
+
+                        {/* Tab: WISHLIST */}
+                        <button
+                          onClick={() => setFilter("WISHLIST")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            filter === "WISHLIST"
+                              ? "bg-white text-rose-700 shadow-xs border border-rose-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <Heart
+                            size={14}
+                            className={filter === "WISHLIST" ? "text-rose-600 fill-current" : "text-slate-400"}
+                          />
+                          <span>Wishlist</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              filter === "WISHLIST" ? "bg-rose-100 text-rose-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {wishlistIds.length}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -642,7 +851,17 @@ function UserDashboardContent() {
                 </div>
               ) : (
                 <div className="p-4 sm:p-6">
-                  {filteredTransactions.length === 0 ? (
+                  {isTxLoading || isUserLoading ? (
+                    <div className="text-center py-12 flex flex-col items-center gap-3">
+                      <Loader2 size={28} className="animate-spin text-blue-600" />
+                      <p className="text-sm text-slate-500">Memuat transaksi...</p>
+                    </div>
+                  ) : txError || userError ? (
+                    <div className="text-center py-12">
+                      <p className="text-sm text-red-500 mb-3">{txError || userError}</p>
+                      <Button variant="outline" size="sm" onClick={() => { void refetchTransactions(); void refetchUser(); }}>Coba Lagi</Button>
+                    </div>
+                  ) : filteredTransactions.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 text-xs">Tidak ada transaksi pada filter ini.</div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
@@ -762,20 +981,143 @@ function UserDashboardContent() {
             {/* VIEW 1: OVERVIEW & LISTINGS */}
             {sellerView === "overview" && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                {/* Listings Management */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                  <div className="p-3.5 sm:p-5 border-b border-slate-100 flex flex-col gap-2.5 sm:gap-3">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900">Kelola Katalog Post Akun Saya</h2>
-                    <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/80 rounded-xl overflow-x-auto scrollbar-none">
-                      {(["ALL", "AVAILABLE", "INACTIVE", "SOLD"] as const).map((f) => (
-                        <button key={f} onClick={() => setListingFilter(f)}
-                          className={`px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer shrink-0 ${listingFilter === f ? "bg-white text-emerald-700 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}>
-                          {f === "ALL" && `Semua (${myListings.length})`}
-                          {f === "AVAILABLE" && `Dijual (${activeListings.length})`}
-                          {f === "INACTIVE" && `Dijeda (${inactiveListings.length})`}
-                          {f === "SOLD" && `Terjual (${soldListings.length})`}
+                {/* Listings Management with Premium Design */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+                  {/* Top Header Banner */}
+                  <div className="p-4 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50/90 via-white to-emerald-50/30">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Title & Icon Area */}
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+                          <Package size={22} className="stroke-[2.2]" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                              Kelola Katalog Post Akun Saya
+                            </h2>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 tracking-wider">
+                              Seller Active
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Pantau keaktifan akun game yang Anda pasang, ubah harga, atau jeda sementara iklan.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right Actions: Live Search */}
+                      <div className="w-full sm:w-72">
+                        <div className="relative w-full">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            value={sellerListingSearch}
+                            onChange={(e) => setSellerListingSearch(e.target.value)}
+                            placeholder="Cari judul iklan, game, ID..."
+                            className="w-full text-xs pl-9 pr-7 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-slate-400"
+                          />
+                          {sellerListingSearch && (
+                            <button
+                              onClick={() => setSellerListingSearch("")}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-0.5"
+                              title="Hapus pencarian"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filter Tabs Navigation (Segmented Controls) */}
+                    <div className="mt-4 pt-4 border-t border-slate-100/80 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+                      <div className="inline-flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 shrink-0">
+                        {/* Tab: SEMUA */}
+                        <button
+                          onClick={() => setListingFilter("ALL")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            listingFilter === "ALL"
+                              ? "bg-white text-emerald-800 shadow-xs border border-emerald-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <Package size={14} className={listingFilter === "ALL" ? "text-emerald-600" : "text-slate-400"} />
+                          <span>Semua</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                              listingFilter === "ALL" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {myListings.length}
+                          </span>
                         </button>
-                      ))}
+
+                        {/* Tab: DIJUAL / AKTIF */}
+                        <button
+                          onClick={() => setListingFilter("AVAILABLE")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            listingFilter === "AVAILABLE"
+                              ? "bg-white text-emerald-700 shadow-xs border border-emerald-300 ring-2 ring-emerald-400/20"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <PlayCircle size={14} className={listingFilter === "AVAILABLE" ? "text-emerald-600" : "text-slate-400"} />
+                          <span>Aktif Dijual</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              listingFilter === "AVAILABLE" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {activeListings.length}
+                          </span>
+                        </button>
+
+                        {/* Tab: DIJEDA */}
+                        <button
+                          onClick={() => setListingFilter("INACTIVE")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            listingFilter === "INACTIVE"
+                              ? "bg-white text-amber-700 shadow-xs border border-amber-200/60"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <PauseCircle size={14} className={listingFilter === "INACTIVE" ? "text-amber-500" : "text-slate-400"} />
+                          <span>Dijeda</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              listingFilter === "INACTIVE" ? "bg-amber-100 text-amber-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {inactiveListings.length}
+                          </span>
+                        </button>
+
+                        {/* Tab: TERJUAL */}
+                        <button
+                          onClick={() => setListingFilter("SOLD")}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            listingFilter === "SOLD"
+                              ? "bg-white text-slate-800 shadow-xs border border-slate-300"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                          }`}
+                        >
+                          <CheckCircle2 size={14} className={listingFilter === "SOLD" ? "text-slate-700" : "text-slate-400"} />
+                          <span>Terjual</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                              listingFilter === "SOLD" ? "bg-slate-200 text-slate-700" : "bg-slate-200/80 text-slate-600"
+                            }`}
+                          >
+                            {soldListings.length}
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="hidden lg:flex items-center gap-2 text-xs text-slate-500">
+                        <TrendingUp size={14} className="text-emerald-600" />
+                        <span>Total Nilai Aset: <strong className="text-slate-800">{formatRupiah(myListings.reduce((sum, l) => sum + (l.status === 'AVAILABLE' ? l.price : 0), 0))}</strong></span>
+                      </div>
                     </div>
                   </div>
                   <div className="p-4 sm:p-6">
@@ -914,7 +1256,7 @@ function UserDashboardContent() {
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
-                    onClick={() => setSellerView("overview")}
+                    onClick={() => navigateDashboard("seller")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -1260,7 +1602,7 @@ function UserDashboardContent() {
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
-                    onClick={() => setSellerView("overview")}
+                    onClick={() => navigateDashboard("seller")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -1323,7 +1665,7 @@ function UserDashboardContent() {
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <button
-                    onClick={() => setSellerView("overview")}
+                    onClick={() => navigateDashboard("seller")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-white bg-slate-50 transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
