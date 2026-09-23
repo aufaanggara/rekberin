@@ -16,7 +16,7 @@ development_duration: 14 calendar days
 testing_duration: 7 calendar days
 assignment_rule: exactly_one_assignee_per_issue
 team_model: 4 fullstack developers
-current_plan_status: implementation_in_progress; DEV-01 completed_on_feature_branch; remaining_issues_follow_backlog
+current_plan_status: implementation_in_progress; DEV-02 merged_to_main; DEV-03 implemented_on_feature_branch; remaining_issues_follow_backlog
 ```
 
 ## AI_OPERATING_RULES
@@ -112,6 +112,39 @@ progressive_chat_and_transaction_flow_2026_09_21:
   review_mode:
     status: all_stages_1_to_4_unlocked_for_testing
     note: Tahap 1 sampai 4 saat ini dibuka kuncinya (unlocked) agar developer (Afiq/team) dapat bebas mengklik dan mereview seluruh tampilan antarmuka dan form tanpa terblokir status transaksi.
+```
+
+## CURRENT_IMPLEMENTATION_STATE_2026_09_23
+
+> Authoritative snapshot for DEV-03 and the persistent user dashboard sidebar after the latest `main` update. If older backlog or session notes conflict with this snapshot, use this section for current implementation state.
+
+```yaml
+main_commit: b9ed583
+branch: feat/issue-03-handover
+dev03_issue: DEV-03
+dev03_status: implemented_committed_pushed
+dev03_commit: 5d875df
+
+transaction_submission:
+  admin_options: GET /api/admins
+  create_transaction: POST /api/transactions with listingId and selected adminId
+  redirect: /user/transactions/{id} using the persisted transaction ID returned by the API
+  dummy_transaction_id: trx_1 is not used for checkout or the active chat hub
+  active_chat_hub: renders API-backed transactions and links with each transaction's real ID
+
+handover:
+  route: GET and POST /api/transactions/[id]/handover
+  start_authorization: assigned ADMIN or SUPER_ADMIN after transaction status PAYMENT_CONFIRMED
+  receipt_authorization: transaction buyer only
+  persistence: transaction status and actor/timestamp audit log are written to the database
+  completion: transaction becomes COMPLETED and its IN_TRANSACTION listing becomes SOLD atomically
+
+persistent_user_dashboard_sidebar:
+  main_commit: 3b51145
+  route_layout: app/(dashboard)/user/layout.tsx wraps CurrentUserProvider and UserDashboardShell
+  shell: components/layout/UserDashboardShell.tsx owns DashboardSidebar around child routes
+  navigation_behavior: sidebar remains mounted across routes within /user; chat page does not render a duplicate sidebar
+  responsive_behavior: sidebar is sticky on large screens and participates in the stacked layout on smaller screens
 ```
 
 ## CURRENT_IMPLEMENTATION_STATE_2026_09_22
@@ -1499,7 +1532,7 @@ unit_tests: 6/6 passed
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-02 QRIS/Payment | ✅ Committed and pushed; Sandbox verified | `feat/issue-02-midtrans-qris` | Assigned: Ibrahim. Commit `f546d1e`; Core API QRIS; parser handles provider 404 before first charge; webhook path configured. |
-| DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-03 Handover | ✅ Implemented and pushed | `feat/issue-03-handover` | Assigned: Ibrahim. Admin starts handover after payment confirmation; buyer confirms receipt; transaction and listing state are persisted. Checkout and active chat use database transaction IDs, not `trx_1`. |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |
 | DEV-10 Review/Rating | ✅ Completed | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. API Review (`/api/transactions/[id]/reviews`) + Form Rating 1-5 Bintang di Tahap 4 |
