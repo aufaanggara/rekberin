@@ -133,6 +133,7 @@ export function mapTransactionApiToViewModel(
       id: transaction.listing.id,
       title: transaction.listing.title,
       game: transaction.listing.game,
+      images: transaction.listing.images,
       seller: toUserProfile(transaction.listing.seller),
     },
     buyer: toUserProfile(transaction.buyer),
