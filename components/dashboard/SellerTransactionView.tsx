@@ -97,6 +97,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="NEGOTIATION"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
                 buyerName={tx.buyer.username}
@@ -127,6 +128,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="REKBER"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
                 buyerName={tx.buyer.username}
@@ -152,6 +154,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="HANDOVER"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
                 buyerName={tx.buyer.username}
@@ -180,6 +183,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="DISBURSEMENT"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
                 buyerName={tx.buyer.username}

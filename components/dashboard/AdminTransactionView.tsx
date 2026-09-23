@@ -88,6 +88,7 @@ export function AdminTransactionView({
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="REKBER"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}
                 buyerName={tx.buyer.username}
@@ -113,6 +114,7 @@ export function AdminTransactionView({
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="HANDOVER"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}
                 buyerName={tx.buyer.username}
@@ -141,6 +143,7 @@ export function AdminTransactionView({
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="DISBURSEMENT"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}
                 buyerName={tx.buyer.username}
