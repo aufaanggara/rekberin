@@ -101,6 +101,7 @@ model Transaction {
 
   reviews      Review[]
   chatMessages ChatMessage[]
+  payment      Payment?
 }
 
 enum TransactionStatus {
@@ -111,6 +112,48 @@ enum TransactionStatus {
   COMPLETED
   DISPUTED
   CANCELLED
+}
+
+enum PaymentProvider {
+  MIDTRANS
+}
+
+enum PaymentMethod {
+  QRIS
+}
+
+enum PaymentStatus {
+  PENDING
+  SETTLEMENT
+  EXPIRE
+  DENY
+  CANCEL
+  FAILURE
+}
+
+model Payment {
+  id                    String          @id @default(cuid())
+  transactionId         String          @unique
+  transaction           Transaction     @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  provider              PaymentProvider @default(MIDTRANS)
+  method                PaymentMethod   @default(QRIS)
+  status                PaymentStatus   @default(PENDING)
+  orderId               String          @unique
+  providerTransactionId String?         @unique
+  providerPaymentType   String?
+  amount                Int
+  currency              String          @default("IDR")
+  acquirer              String          @default("gopay")
+  qrCodeUrl             String?
+  expiresAt             DateTime?
+  paidAt                DateTime?
+  lastSyncedAt          DateTime?
+  lastNotifiedAt        DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Review {

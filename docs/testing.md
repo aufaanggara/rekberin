@@ -4,8 +4,8 @@
 
 | Suite | Perintah | Cakupan |
 |---|---|---|
-| Unit | `npm test` | Parser DTO, policy transaksi, participant access, timeline, single-winner helper |
-| Database integration | `npm run test:integration` | Persistence relasi/status dan race condition claim listing di PostgreSQL |
+| Unit | `npm test` | Midtrans request/parser/signature, payment DTO, monotonic reconciliation, policy transaksi, participant access, timeline |
+| Database integration | `npm run test:integration` | Payment one-to-one/amount/ownership, settlement idempotency, terminal release, Restrict cleanup, persistence relasi/status, and race condition claim listing di PostgreSQL |
 | Transaction HTTP E2E | `npm run test:e2e` | Login seller/buyer/admin, create listing, create/reopen transaction, access peserta, reject non-peserta |
 | Auth E2E | `npm run test:auth:e2e` | Register, duplicate email/username, password salah, session, middleware admin, role, logout |
 | TypeScript | `npm run typecheck` | TypeScript strict check tanpa emit |
@@ -16,9 +16,11 @@
 Pada branch saat ini:
 
 - `npm run typecheck` berhasil.
-- `npm test` berhasil dengan 6 test lulus.
+- `npm test` berhasil dengan 14 test lulus.
 
 Integration/E2E membutuhkan database, Supabase Auth, dan konfigurasi environment aktif. Jalankan suite tersebut setelah identity test dan server dependency siap; test integration/E2E membuat fixture temporer dan memiliki cleanup di akhir.
+
+Provider Midtrans dimock pada seam `MidtransGateway` dan adapter `fetch` untuk menguji request Core API, custom expiry, timeout/error classification, dan parser tanpa credential Sandbox. Route-level HTTP E2E yang benar-benar menjalankan Next server dengan injected provider belum ditambahkan karena route handler saat ini membangun gateway dari konfigurasi server; database/service coverage dan adapter unit coverage menjadi bukti terisolasi yang digunakan. Manual Sandbox webhook/payment tetap memerlukan credential dan notification URL publik.
 
 ## Cakupan unit test saat ini
 
@@ -43,6 +45,11 @@ Integration test membuktikan:
 - listing berubah menjadi `IN_TRANSACTION`;
 - dua buyer bersamaan hanya menghasilkan satu transaksi;
 - request kedua mendapatkan `TransactionApiError` status `409`.
+- satu Payment per Transaction dengan nominal `price + platformFee + adminFee`;
+- buyer lain tidak dapat membuat atau membaca Payment;
+- settlement mengonfirmasi transaksi sekali tanpa log duplikat dan tidak melepas listing;
+- terminal failure membatalkan transaksi serta melepas listing;
+- foreign key `Restrict` mewajibkan Payment dihapus sebelum Transaction.
 
 ## Cakupan E2E yang diharapkan
 
@@ -52,7 +59,7 @@ E2E transaction menguji alur nyata dari seller membuat listing sampai buyer memb
 
 Belum ada test otomatis untuk:
 
-- mutation status payment/handover/dispute karena endpoint belum ada;
+- mutation status handover/dispute karena endpoint belum ada;
 - upload bukti bayar atau attachment chat;
 - review/rating;
 - dashboard overview yang masih dummy;

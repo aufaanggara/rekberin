@@ -72,6 +72,10 @@ DISPUTED
 CANCELLED
 ```
 
+### `Payment`
+
+Satu transaksi dapat memiliki paling banyak satu Payment QRIS Midtrans Sandbox. `amount` adalah snapshot server-side dari `price + platformFee + adminFee`; `orderId` deterministik dan `transactionId`/`orderId` memiliki unique constraint. URL QR, identity transaksi provider, status, expiry, dan waktu settlement disimpan tanpa mengekspos field internal provider melalui DTO buyer. Foreign key `Restrict` mengharuskan Payment dihapus sebelum Transaction.
+
 ### `Review`
 
 Review menghubungkan transaksi, giver, receiver, rating, comment, dan `ReviewType`:
@@ -94,6 +98,7 @@ User 1──N Transaction sebagai buyer
 User 1──N Transaction sebagai seller
 User 1──N Transaction sebagai admin
 Listing 1──N Transaction
+Transaction 1──0..1 Payment
 Transaction 1──N ChatMessage
 Transaction 1──N Review
 User 1──1 AdminProfile (opsional)
@@ -103,6 +108,7 @@ User 1──1 AdminProfile (opsional)
 
 1. `20260915151821_init`: membuat enum, tabel, unique index, dan foreign key seluruh model awal.
 2. `20260915154349_hapus_whatsapp_from_user`: menghapus kolom `whatsapp` dari tabel `User`.
+3. `20260922100000_add_midtrans_qris_payment`: menambah Payment QRIS Sandbox secara additive dengan one-to-one, positive amount CHECK, dan Restrict cleanup.
 
 Migration kedua penting karena beberapa UI/dummy/type lama masih merujuk `whatsapp`. Rujukan tersebut perlu dihapus atau diganti sebelum halaman direktori admin dipindahkan ke database.
 
@@ -110,7 +116,6 @@ Migration kedua penting karena beberapa UI/dummy/type lama masih merujuk `whatsa
 
 Schema saat ini belum memiliki model terpisah untuk:
 
-- payment atau payment attempt QRIS;
 - payment proof sebagai record dengan metadata;
 - dispute dengan status/resolution/actor;
 - transaction activity sebagai tabel audit;
@@ -124,6 +129,6 @@ Field `proofUrls`, `logs`, `checklist`, dan `disputeReason` dapat menjadi transi
 
 - Tambahkan constraint/rules server untuk rating 1-5 dan review unik per pasangan transaksi/target.
 - Tambahkan index untuk foreign key dan query transaksi berdasarkan buyer/seller/admin.
-- Pisahkan `Payment`, `PaymentProof`, `Dispute`, `TransactionActivity`, serta vault credential dari JSON umum jika fitur benar-benar diaktifkan.
+- Pisahkan `PaymentProof`, `Dispute`, `TransactionActivity`, serta vault credential dari JSON umum jika fitur benar-benar diaktifkan.
 - Jangan menyimpan password akun game sebagai plain text; gunakan vault dengan encryption dan akses minimum.
 - Buat kebijakan lifecycle listing yang eksplisit untuk `COMPLETED` dan `CANCELLED`.

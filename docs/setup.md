@@ -19,7 +19,7 @@ npx prisma generate
 
 `npm install` menjalankan `postinstall` yang juga memanggil `prisma generate`. Perintah eksplisit tetap berguna ketika schema atau dependency berubah.
 
-Repository saat ini **belum memiliki `.env.example`**, walaupun README lama menyebut file tersebut. Buat `.env.local` secara lokal dan isi variabel berikut tanpa memasukkan nilainya ke Git:
+Repository menyediakan `.env.example` sebagai template placeholder. Salin ke `.env.local` secara lokal dan isi variabel berikut tanpa memasukkan nilainya ke Git:
 
 | Variabel | Dipakai oleh | Keterangan |
 |---|---|---|
@@ -34,6 +34,11 @@ Repository saat ini **belum memiliki `.env.example`**, walaupun README lama meny
 | `NEXT_PUBLIC_SITE_URL` | Konfigurasi lokal | URL site; saat ini tidak menjadi dependency utama route |
 | `UPLOADTHING_SECRET` | Konfigurasi yang direncanakan | Dependency ada, tetapi route upload aktif belum tersedia |
 | `UPLOADTHING_APP_ID` | Konfigurasi yang direncanakan | Dependency ada, tetapi route upload aktif belum tersedia |
+| `MIDTRANS_ENVIRONMENT` | Payment QRIS | Wajib `sandbox` untuk Issue 02 |
+| `MIDTRANS_SERVER_KEY` | Payment QRIS server-side | Sandbox Server Key; jangan expose ke browser |
+| `MIDTRANS_NOTIFICATION_URL` | Payment QRIS webhook | URL HTTPS publik untuk `/api/webhooks/midtrans` |
+| `MIDTRANS_QRIS_ACQUIRER` | Payment QRIS | Wajib `gopay` pada Issue 02 |
+| `MIDTRANS_QRIS_EXPIRY_MINUTES` | Payment QRIS | Wajib `15` pada Issue 02 |
 
 Jangan menyalin `.env` yang ada ke dokumentasi. Gunakan secret manager pada deployment.
 
