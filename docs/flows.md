@@ -149,8 +149,8 @@ Beberapa komponen visual sudah ada, tetapi belum menjadi alur API:
 |---|---|
 | Payment modal | QRIS Midtrans Sandbox, server expiry countdown, and provider polling |
 | Payment proof | UI lama/dummy; belum ada endpoint atau model PaymentProof |
-| Handover/vault | Credential berada di Zustand memory; belum persisten dan belum aman untuk production |
-| Admin status action | `ActionPanel` hanya toast “demo”; detail admin saat ini read-only |
-| Buyer confirm | Belum ada mutation API |
+| Handover/vault | Status handover, audit log, dan penyelesaian transaksi sudah persisten; credential vault masih prototype/local |
+| Admin status action | `ActionPanel` memanggil mutation server untuk memulai handover setelah pembayaran terkonfirmasi |
+| Buyer confirm | `POST /api/transactions/[id]/handover` menyelesaikan transaksi dan menandai listing `SOLD` secara atomik |
 | Dispute | Modal/store lokal; `disputeReason` schema ada tetapi belum ada route |
 | Review/rating | Model Prisma dan dummy UI ada; endpoint belum ada |

@@ -14,27 +14,7 @@ export function getHandoverState(transactionId: string): HandoverState {
   if (!handoverStore.has(transactionId)) {
     handoverStore.set(transactionId, {
       transactionId,
-      otpLogs: [
-        {
-          id: `otp_demo_1`,
-          transactionId,
-          action: "REQUEST",
-          actorRole: "BUYER",
-          actorName: "Pembeli",
-          timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
-        },
-        {
-          id: `otp_demo_2`,
-          transactionId,
-          action: "SUBMIT",
-          actorRole: "SELLER",
-          actorName: "Penjual",
-          codeMasked: "847***",
-          timestamp: new Date(Date.now() - 1000 * 60 * 6).toISOString(),
-        },
-      ],
-      handoverStartedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      sellerLastActiveAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+      otpLogs: [],
     });
   }
   return handoverStore.get(transactionId)!;

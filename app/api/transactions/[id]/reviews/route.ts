@@ -10,19 +10,6 @@ const reviewSchema = z.object({
   type: z.enum(["BUYER_TO_SELLER", "BUYER_TO_ADMIN", "SELLER_TO_ADMIN"]).default("BUYER_TO_SELLER"),
 });
 
-interface DemoReview {
-  id: string;
-  transactionId: string;
-  giverId: string;
-  receiverId: string;
-  rating: number;
-  comment?: string | null;
-  type: "BUYER_TO_SELLER" | "BUYER_TO_ADMIN" | "SELLER_TO_ADMIN";
-  createdAt: string;
-}
-
-const demoReviewsStore: Record<string, DemoReview[]> = {};
-
 async function getSessionUser() {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; role?: string; name?: string; email?: string } | undefined;
@@ -54,11 +41,6 @@ export async function GET(
 
     if (transaction) {
       return NextResponse.json({ reviews: transaction.reviews });
-    }
-
-    if (params.id === "trx_1" || params.id.startsWith("trx_")) {
-      const list = demoReviewsStore[params.id] || [];
-      return NextResponse.json({ reviews: list });
     }
 
     return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
@@ -140,28 +122,6 @@ export async function POST(
       });
 
       return NextResponse.json({ review }, { status: 201 });
-    }
-
-    // Demo / fallback test transactions
-    if (params.id === "trx_1" || params.id.startsWith("trx_")) {
-      if (!demoReviewsStore[params.id]) {
-        demoReviewsStore[params.id] = [];
-      }
-
-      const newDemoReview: DemoReview = {
-        id: `rev_${Date.now()}`,
-        transactionId: params.id,
-        giverId: user.id,
-        receiverId: "u_seller_andi",
-        rating,
-        comment: comment || null,
-        type,
-        createdAt: new Date().toISOString(),
-      };
-
-      demoReviewsStore[params.id].push(newDemoReview);
-
-      return NextResponse.json({ review: newDemoReview }, { status: 201 });
     }
 
     return NextResponse.json({ error: "Transaction not found" }, { status: 404 });

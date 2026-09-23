@@ -116,7 +116,7 @@ export function ProgressiveTransactionTabs({
             <Clock className="w-3.5 h-3.5 text-blue-400" />
           </div>
           <span className="font-bold text-slate-200 uppercase tracking-wider text-[11px] sm:text-xs">
-            Alur Transaksi Rekberin (4 Tahap)
+            Alur Transaksi
           </span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -182,23 +182,6 @@ export function ProgressiveTransactionTabs({
           })}
         </div>
 
-        {/* Active Stage Detail in Mobile */}
-        <div className="bg-slate-800/70 border border-slate-700/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
-          <div>
-            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
-              Fokus Tahap Ini:
-            </span>
-            <span className="font-bold text-slate-200 text-xs">
-              {tabs.find((t) => t.id === currentStage)?.label}
-            </span>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              {tabs.find((t) => t.id === currentStage)?.description}
-            </p>
-          </div>
-          <span className="px-2 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-lg shrink-0">
-            Aktif
-          </span>
-        </div>
       </div>
 
       {/* 💻 DESKTOP & TABLET STEPPER (>= sm) */}

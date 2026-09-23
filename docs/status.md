@@ -12,7 +12,7 @@ Status berikut disusun dari source code branch yang sedang digunakan, bukan dari
 | DEV-08 Marketplace integration | Listing marketplace memakai API; direktori admin belum | `useListings.ts`, `ListingsExplorer.tsx`, `/rekber` |
 | DEV-01 Transaction flow | Create/read tersedia | `lib/transactions.ts`, transaction routes, transaction E2E |
 | DEV-02 QRIS/payment | Implemented Sandbox path | Midtrans Core API QRIS, buyer-only payment routes, webhook reconciliation, persistent Payment, and QRIS-only buyer modal |
-| DEV-03 Handover | Belum terhubung | `AccountVaultPanel.tsx` dan checklist masih local/demo |
+| DEV-03 Handover | Alur status selesai; credential vault masih prototype | `handover-service.ts`, `/api/transactions/[id]/handover`, `ActionPanel.tsx`, handover tests |
 | DEV-04 Dispute | Belum terhubung | `DisputeModal.tsx`/store lokal; tidak ada mutation route |
 | DEV-09 Chat | API + polling tersedia | `messages/route.ts`, `TransactionChat.tsx` |
 | DEV-10 Review/rating | Model/dummy UI ada; API belum | `Review` schema, dummy review components |
@@ -48,7 +48,7 @@ Status berikut disusun dari source code branch yang sedang digunakan, bukan dari
 
 ## Gap prioritas tinggi sebelum production
 
-1. **Status transaction mutation**: tambahkan route server-side dengan state machine eksplisit untuk konfirmasi pembayaran, mulai/selesai handover, buyer confirmation, cancel, dan dispute.
+1. **Status transaction mutation**: lanjutkan state machine server-side untuk cancel dan dispute; payment confirmation dan alur handover sudah memiliki transition serta authorization tersendiri.
 2. **Payment model dan proof**: pisahkan payment attempt/proof dari `proofUrls`, hubungkan provider sandbox, expiry, webhook/polling, dan audit log.
 3. **Credential vault**: jangan menyimpan password akun game di Zustand/localStorage; gunakan storage terenkripsi dan access control per transaksi.
 4. **Listing ownership mutation**: implementasikan edit/deactivate dengan `sellerId` dari session, bukan body client.

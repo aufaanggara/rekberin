@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 import { formatRupiah } from "@/lib/utils";
@@ -15,181 +15,73 @@ import {
   ArrowLeft,
   ArrowRight,
   Gamepad2,
-  CheckCircle2,
   Filter,
   Sparkles,
   ShoppingBag,
   Store,
+  AlertTriangle,
 } from "lucide-react";
 import type { ChatTabStage } from "@/types";
+
+type RoomStage = ChatTabStage | "DISPUTED";
 
 interface ActiveChatRoomItem {
   id: string;
   listingTitle: string;
   game: string;
-  imageUrl: string;
   price: number;
-  stage: ChatTabStage;
-  stageLabel: string;
-  stageDescription: string;
+  stage: RoomStage;
   role: "BUYER" | "SELLER";
   partnerName: string;
   adminName: string;
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount?: number;
+  createdAt: string;
 }
 
 export default function UserChatInboxPage() {
   const [stageFilter, setStageFilter] = useState<string>("ALL");
   const [roleFilter, setRoleFilter] = useState<"ALL" | "BUYER" | "SELLER">("ALL");
-  const [viewerId, setViewerId] = useState<string | null | undefined>(undefined);
-  const { data, isLoading } = useTransactions();
-
-  useEffect(() => {
-    getSession().then((session) => {
-      const user = session?.user as { id?: unknown } | undefined;
-      setViewerId(typeof user?.id === "string" ? user.id : null);
-    });
-  }, []);
+  const { data: session, status: sessionStatus } = useSession();
+  const { data, isLoading, error, refetch } = useTransactions();
+  const sessionUser = session?.user as { id?: unknown } | undefined;
+  const viewerId = typeof sessionUser?.id === "string" ? sessionUser.id : null;
 
   const transactions = useMemo(
     () => data.map(mapTransactionApiToViewModel),
     [data]
   );
 
-  // Map active transactions and combine with standard demo room
+  // Hanya tampilkan room transaksi nyata yang melibatkan pengguna saat ini.
   const activeRooms: ActiveChatRoomItem[] = useMemo(() => {
-    const list: ActiveChatRoomItem[] = [];
+    if (!viewerId) return [];
 
-    // Complete showcase rooms covering all Multi-Buyer & Progressive Transaction Scenarios
-    list.push({
-      id: "trx_1",
-      listingTitle: "Akun eFootball 2024 Full Squad Big Time + Epic Booster 3150 OVR",
-      game: "eFootball Mobile",
-      imageUrl: "/screenshots/efootball_89.jpg",
-      price: 850000,
-      stage: "NEGOTIATION",
-      stageLabel: "Tahap 1: Negosiasi (Buyer - Deal)",
-      stageDescription: "Penjual telah meng-ACC tawaran Rp 800.000, siap lanjut ke Rekber",
-      role: "BUYER",
-      partnerName: "efootball_seller1",
-      adminName: "Anto Wijaya (Admin Rekber)",
-      lastMessage: "Boleh gan, harga 800rb langsung saya bungkus ya!",
-      lastMessageTime: "2 mnt lalu",
-      unreadCount: 1,
-    });
-
-    list.push({
-      id: "trx_seller_multi",
-      listingTitle: "Akun eFootball 2024 Full Squad Big Time + Epic Booster 3150 OVR",
-      game: "eFootball Mobile",
-      imageUrl: "/screenshots/efootball_89.jpg",
-      price: 850000,
-      stage: "NEGOTIATION",
-      stageLabel: "Tahap 1: Penjual (Multi-Buyer Active)",
-      stageDescription: "Menegosiasikan akun dengan Budi (dan 2 calon pembeli lain di room terpisah)",
-      role: "SELLER",
-      partnerName: "budi_pratama",
-      adminName: "Anto Wijaya (Admin Rekber)",
-      lastMessage: "Bisa lepas 800k sekarang gan? Uang langsung siap di TF.",
-      lastMessageTime: "4 mnt lalu",
-    });
-
-    list.push({
-      id: "trx_buyer_suspended",
-      listingTitle: "Akun eFootball 2024 Full Squad Big Time + Epic Booster 3150 OVR",
-      game: "eFootball Mobile",
-      imageUrl: "/screenshots/efootball_89.jpg",
-      price: 850000,
-      stage: "NEGOTIATION",
-      stageLabel: "Tahap 1: Pembeli Lain (Ditangguhkan)",
-      stageDescription: "Akun sedang diproses pembayaran Rekber oleh calon pembeli lain",
-      role: "BUYER",
-      partnerName: "efootball_seller1",
-      adminName: "Anto Wijaya (Admin Rekber)",
-      lastMessage: "Sistem: Negosiasi ditangguhkan sementara karena akun sedang di-checkout pembeli lain.",
-      lastMessageTime: "1 mnt lalu",
-    });
-
-    list.push({
-      id: "trx_demo_2",
-      listingTitle: "Mobile Legends Akun Sultan All Collector + 120 Skin Epic",
-      game: "Mobile Legends",
-      imageUrl: "/screenshots/efootball_rich.jpg",
-      price: 1450000,
-      stage: "REKBER",
-      stageLabel: "Tahap 2: Bayar ke Rekber",
-      stageDescription: "Menunggu pembayaran QRIS & verifikasi dana escrow",
-      role: "BUYER",
-      partnerName: "mlbb_store_id",
-      adminName: "Anto Wijaya (Admin Rekber)",
-      lastMessage: "Admin Anto: QRIS pembayaran telah aktif, batas waktu 5 menit.",
-      lastMessageTime: "10 mnt lalu",
-    });
-
-    list.push({
-      id: "trx_demo_3",
-      listingTitle: "FC Mobile Akun OVR 102 Squad Icon + 50 Juta Koin",
-      game: "FC Mobile",
-      imageUrl: "/screenshots/efootball_legends.jpg",
-      price: 620000,
-      stage: "HANDOVER",
-      stageLabel: "Tahap 3: Amankan Akun",
-      stageDescription: "Serah terima data login & koordinasi OTP 2FA",
-      role: "SELLER",
-      partnerName: "fcmaster_ina",
-      adminName: "Anto Wijaya (Admin Rekber)",
-      lastMessage: "Pembeli meminta kode OTP baru untuk verifikasi email Konami ID.",
-      lastMessageTime: "15 mnt lalu",
-      unreadCount: 2,
-    });
-
-    // Append any live database transactions if active
-    transactions.forEach((tx) => {
-      if (tx.id !== "trx_1" && tx.status !== "CANCELLED" && tx.status !== "COMPLETED") {
-        let stage: ChatTabStage = "NEGOTIATION";
-        let stageLabel = "Tahap 1: Negosiasi";
-        let stageDescription = "Tawar menawar harga akun";
-
-        if (tx.status === "PENDING_PAYMENT") {
-          stage = "REKBER";
-          stageLabel = "Tahap 2: Bayar ke Rekber";
-          stageDescription = "Menunggu verifikasi pembayaran";
-        } else if (
-          tx.status === "PAYMENT_CONFIRMED" ||
-          tx.status === "IN_HANDOVER" ||
-          tx.status === "PENDING_BUYER_CONFIRM"
-        ) {
-          stage = "HANDOVER";
-          stageLabel = "Tahap 3: Amankan Akun";
-          stageDescription = "Serah terima kredensial & OTP";
-        }
-
-        const isBuyer = tx.buyer.id === viewerId;
-
-        list.push({
-          id: tx.id,
-          listingTitle: tx.listing.title,
-          game: tx.listing.game,
-          imageUrl: "/screenshots/efootball_89.jpg",
-          price: tx.price,
-          stage,
-          stageLabel,
-          stageDescription,
-          role: isBuyer ? "BUYER" : "SELLER",
-          partnerName: isBuyer ? tx.listing.seller.username : tx.buyer.username,
-          adminName: tx.admin.user.username,
-          lastMessage: "Koordinasi transaksi aktif via Rekberin",
-          lastMessageTime: new Date(tx.createdAt).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        });
+    return transactions.flatMap((tx) => {
+      const isBuyer = tx.buyer.id === viewerId;
+      const isSeller = tx.listing.seller.id === viewerId;
+      if ((!isBuyer && !isSeller) || tx.status === "CANCELLED" || tx.status === "COMPLETED") {
+        return [];
       }
-    });
 
-    return list;
+      let stage: RoomStage;
+      if (tx.status === "PENDING_PAYMENT") {
+        stage = "REKBER";
+      } else if (tx.status === "DISPUTED") {
+        stage = "DISPUTED";
+      } else {
+        stage = "HANDOVER";
+      }
+
+      return [{
+        id: tx.id,
+        listingTitle: tx.listing.title,
+        game: tx.listing.game,
+        price: tx.price,
+        stage,
+        role: isBuyer ? "BUYER" : "SELLER",
+        partnerName: isBuyer ? tx.listing.seller.username : tx.buyer.username,
+        adminName: tx.admin.user.username,
+        createdAt: tx.createdAt,
+      }];
+    });
   }, [transactions, viewerId]);
 
   const filteredRooms = useMemo(() => {
@@ -201,7 +93,7 @@ export default function UserChatInboxPage() {
     });
   }, [activeRooms, stageFilter, roleFilter]);
 
-  const getStageBadge = (stage: ChatTabStage) => {
+  const getStageBadge = (stage: RoomStage) => {
     switch (stage) {
       case "NEGOTIATION":
         return {
@@ -226,6 +118,12 @@ export default function UserChatInboxPage() {
           icon: Wallet,
           badge: "Tahap 4: Pencairan Dana",
           color: "bg-emerald-50 text-emerald-800 border-emerald-200",
+        };
+      case "DISPUTED":
+        return {
+          icon: AlertTriangle,
+          badge: "Dalam dispute",
+          color: "bg-rose-50 text-rose-700 border-rose-200",
         };
     }
   };
@@ -283,17 +181,6 @@ export default function UserChatInboxPage() {
             </button>
             <button
               type="button"
-              onClick={() => setStageFilter("NEGOTIATION")}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                stageFilter === "NEGOTIATION"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
-              }`}
-            >
-              1. Negosiasi
-            </button>
-            <button
-              type="button"
               onClick={() => setStageFilter("REKBER")}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 stageFilter === "REKBER"
@@ -312,7 +199,18 @@ export default function UserChatInboxPage() {
                   : "bg-purple-50 text-purple-700 hover:bg-purple-100"
               }`}
             >
-              3. Amankan Akun
+              3. Serah Terima
+            </button>
+            <button
+              type="button"
+              onClick={() => setStageFilter("DISPUTED")}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                stageFilter === "DISPUTED"
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+              }`}
+            >
+              Dispute
             </button>
           </div>
 
@@ -348,7 +246,23 @@ export default function UserChatInboxPage() {
         </div>
 
         {/* Active Accounts & Transaction Chat List */}
-        {filteredRooms.length === 0 ? (
+        {sessionStatus === "loading" || isLoading ? (
+          <div className="space-y-3" aria-label="Memuat transaksi" aria-busy="true">
+            <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+            <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-rose-200 bg-white p-8 text-center" role="alert">
+            <p className="text-sm font-semibold text-rose-700">{error}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-3 min-h-10 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white hover:bg-blue-700"
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : filteredRooms.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <Gamepad2 size={32} className="mx-auto text-slate-300 mb-3" />
             <p className="font-bold text-slate-700 text-sm">Tidak ada transaksi aktif pada filter ini.</p>
@@ -409,12 +323,6 @@ export default function UserChatInboxPage() {
                         {room.listingTitle}
                       </h3>
 
-                      {/* Snippet message */}
-                      <p className="text-xs text-slate-600 line-clamp-1">
-                        <strong className="text-slate-700">{room.partnerName}:</strong> &ldquo;
-                        {room.lastMessage}&rdquo;
-                      </p>
-
                       <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-0.5">
                         <span>
                           Partner: <strong className="text-slate-700">{room.partnerName}</strong>
@@ -425,7 +333,11 @@ export default function UserChatInboxPage() {
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1 text-slate-400">
-                          <Clock size={11} /> {room.lastMessageTime}
+                          <Clock size={11} /> Dibuat {new Date(room.createdAt).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </span>
                       </div>
                     </div>

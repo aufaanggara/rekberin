@@ -1,77 +1,94 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { KeyRound, ShieldAlert, Lock, Eye, EyeOff, Send, CheckCircle2, Clock, Smartphone, AlertTriangle, ShieldCheck, ArrowRight, Wallet, HelpCircle, ListOrdered } from "lucide-react";
+import { Lock, Eye, EyeOff, CheckCircle2, Clock, Smartphone, ShieldCheck, ArrowRight, Wallet, ListOrdered, AlertTriangle } from "lucide-react";
 import type { ChatSenderRole, TransactionStatus, OtpLogEntry, AccountCredentials } from "@/types";
-import { toast } from "sonner";
 
 interface AmankanAkunTabViewProps {
-  transactionId: string;
   role: ChatSenderRole;
   transactionStatus: TransactionStatus;
   initialCredentials?: AccountCredentials | null;
-  onConfirmReceipt?: () => void;
+  initialOtpLogs?: OtpLogEntry[];
+  autoReleaseAt?: string | null;
+  onConfirmReceipt?: () => void | Promise<void>;
+  onOpenDispute?: () => void;
   onProceedToDisbursement?: () => void;
 }
 
 export function AmankanAkunTabView({
-  transactionId,
   role,
   transactionStatus,
   initialCredentials,
+  initialOtpLogs,
+  autoReleaseAt,
   onConfirmReceipt,
+  onOpenDispute,
   onProceedToDisbursement,
 }: AmankanAkunTabViewProps) {
-  const [credentials, setCredentials] = useState<AccountCredentials | null>(
-    initialCredentials || {
-      loginMethod: "Konami ID",
-      accountEmail: "efootball_seller@game.com",
-      accountPassword: "SuperSecurePass123!",
-      backupCodes: "183920, 482910",
-      notes: "Akun login Konami ID. Mohon langsung ganti email ke akun pribadi pembeli.",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-    }
-  );
+  const credentials = initialCredentials ?? null;
+  const otpLogs = initialOtpLogs ?? [];
+  const isAdmin = role === "ADMIN";
 
   const [showPassword, setShowPassword] = useState(false);
-  const [isAccountConfirmed, setIsAccountConfirmed] = useState(
-    transactionStatus === "COMPLETED" || transactionStatus === "PENDING_BUYER_CONFIRM"
-  );
+  const isAccountConfirmed = transactionStatus === "COMPLETED";
 
-  const [otpLogs, setOtpLogs] = useState<OtpLogEntry[]>([
-    {
-      id: "otp_1",
-      transactionId,
-      action: "REQUEST",
-      actorRole: "BUYER",
-      actorName: "Pembeli",
-      timestamp: new Date(Date.now() - 1000 * 60 * 8).toLocaleTimeString("id-ID"),
+  const handoverStatus = {
+    PENDING_PAYMENT: {
+      label: "Menunggu pembayaran",
+      description: "Handover akan tersedia setelah pembayaran transaksi dikonfirmasi.",
+      classes: "border-amber-200 bg-amber-50 text-amber-950",
     },
-    {
-      id: "otp_2",
-      transactionId,
-      action: "SUBMIT",
-      actorRole: "SELLER",
-      actorName: "Penjual",
-      codeMasked: "938***",
-      timestamp: new Date(Date.now() - 1000 * 60 * 6).toLocaleTimeString("id-ID"),
+    PAYMENT_CONFIRMED: {
+      label: "Siap dimulai admin",
+      description: "Pembayaran sudah dikonfirmasi. Admin perlu memulai proses handover.",
+      classes: "border-blue-200 bg-blue-50 text-blue-950",
     },
-  ]);
+    IN_HANDOVER: {
+      label: "Handover sedang berlangsung",
+      description: "Buyer dan seller dapat melihat proses serah terima akun pada transaksi ini.",
+      classes: "border-blue-200 bg-blue-50 text-blue-950",
+    },
+    PENDING_BUYER_CONFIRM: {
+      label: "Menunggu konfirmasi buyer",
+      description: "Buyer perlu mengonfirmasi bahwa akun telah diterima.",
+      classes: "border-amber-200 bg-amber-50 text-amber-950",
+    },
+    COMPLETED: {
+      label: "Handover selesai",
+      description: "Buyer telah mengonfirmasi penerimaan akun dan transaksi selesai.",
+      classes: "border-emerald-200 bg-emerald-50 text-emerald-950",
+    },
+    DISPUTED: {
+      label: "Handover dihentikan",
+      description: "Transaksi sedang berada dalam status sengketa.",
+      classes: "border-red-200 bg-red-50 text-red-950",
+    },
+    CANCELLED: {
+      label: "Handover tidak tersedia",
+      description: "Transaksi telah dibatalkan.",
+      classes: "border-slate-200 bg-slate-50 text-slate-950",
+    },
+  }[transactionStatus];
 
-  const [inputOtp, setInputOtp] = useState("");
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-
-  // 2-Hour Auto Release Countdown Timer
-  const [autoReleaseSeconds, setAutoReleaseSeconds] = useState(7200); // 2 hours = 7200s
+  const releaseAtMs = autoReleaseAt
+    ? Date.parse(autoReleaseAt) + 2 * 60 * 60 * 1000
+    : null;
+  const [autoReleaseSeconds, setAutoReleaseSeconds] = useState<number | null>(null);
   const isCompleted = transactionStatus === "COMPLETED";
 
   useEffect(() => {
-    if (isCompleted) return;
-    const interval = setInterval(() => {
-      setAutoReleaseSeconds((prev) => (prev > 1 ? prev - 1 : 0));
-    }, 1000);
+    if (isCompleted || releaseAtMs === null || !Number.isFinite(releaseAtMs)) {
+      setAutoReleaseSeconds(null);
+      return;
+    }
+
+    const updateRemaining = () => {
+      setAutoReleaseSeconds(Math.max(0, Math.floor((releaseAtMs - Date.now()) / 1000)));
+    };
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
     return () => clearInterval(interval);
-  }, [isCompleted]);
+  }, [isCompleted, releaseAtMs]);
 
   const formatAutoRelease = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -80,105 +97,34 @@ export function AmankanAkunTabView({
     return `${hours}j ${mins}m ${secs}d`;
   };
 
-  const handleRequestOtp = () => {
-    const newLog: OtpLogEntry = {
-      id: `otp_${Date.now()}`,
-      transactionId,
-      action: "REQUEST",
-      actorRole: "BUYER",
-      actorName: "Pembeli",
-      timestamp: new Date().toLocaleTimeString("id-ID"),
-    };
-    setOtpLogs((prev) => [...prev, newLog]);
-    toast.success("Permintaan kode OTP berhasil dikirim ke Penjual!");
-  };
-
-  const handleSubmitOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputOtp || inputOtp.length < 4) {
-      toast.error("Masukkan minimal 4-6 digit kode OTP");
-      return;
+  const handleConfirm = async () => {
+    try {
+      await onConfirmReceipt?.();
+    } catch {
+      // The parent callback owns the error toast and transaction state.
     }
-
-    setIsSendingOtp(true);
-    setTimeout(() => {
-      const masked = inputOtp.slice(0, 3) + "***";
-      const newLog: OtpLogEntry = {
-        id: `otp_${Date.now()}`,
-        transactionId,
-        action: "SUBMIT",
-        actorRole: "SELLER",
-        actorName: "Penjual",
-        codeMasked: masked,
-        timestamp: new Date().toLocaleTimeString("id-ID"),
-      };
-      setOtpLogs((prev) => [...prev, newLog]);
-      setInputOtp("");
-      setIsSendingOtp(false);
-      toast.success("Kode OTP berhasil dikirim ke Pembeli!");
-    }, 300);
   };
-
-  const handleConfirm = () => {
-    setIsAccountConfirmed(true);
-    onConfirmReceipt?.();
-    toast.success("Akun berhasil dikonfirmasi! Silakan lanjut ke Tahap 4 untuk pencairan dana.");
-  };
-
-  const isAdmin = role === "ADMIN";
 
   return (
     <div className="space-y-4">
-      {/* 🧭 Panduan Alur Serah Terima & Pencairan Dana */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
-          <ListOrdered className="w-3.5 h-3.5 text-blue-600" />
-          Petunjuk Serah Terima Kredensial Akun
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="font-bold text-blue-600 block mb-0.5">1. Cek & Amankan Akun</span>
-            <p className="text-[11px] text-slate-600">
-              Gunakan data login di bawah & koordinasi kode OTP 2FA untuk ubah email/password ke data Anda.
-            </p>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="font-bold text-blue-600 block mb-0.5">2. Konfirmasi Penerimaan</span>
-            <p className="text-[11px] text-slate-600">
-              Setelah akun berhasil diamankan pembeli, klik tombol <strong>Konfirmasi Terima Akun</strong>.
-            </p>
-          </div>
-          <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950">
-            <span className="font-bold text-emerald-700 block mb-0.5">3. Lanjut ke Tahap 4</span>
-            <p className="text-[11px] text-emerald-800">
-              Masuk ke <strong>Tahap 4 (Pencairan Dana)</strong> bersama Admin Rekber untuk penutupan transaksi.
-            </p>
+      <div className={`rounded-2xl border p-4 ${handoverStatus.classes}`} role="status">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide">Status handover: {handoverStatus.label}</p>
+            <p className="mt-1 text-xs leading-relaxed">{handoverStatus.description}</p>
           </div>
         </div>
       </div>
-
-      {/* 🛡️ Banner Privasi Kredensial */}
-      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 shadow-md">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-600/30 text-blue-400 rounded-xl border border-blue-500/30 shrink-0">
-            <KeyRound className="w-5 h-5" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-bold text-xs sm:text-sm flex items-center gap-2">
-              Ruang Serah Terima & Amankan Akun (Privat 2 Arah)
-            </h4>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Kredensial dan kode OTP hanya dapat dilihat oleh Pembeli dan Penjual. 
-              {isAdmin ? (
-                <span className="text-amber-400 font-semibold block mt-1">
-                  🔒 Mode Admin: Demi privasi dan keamanan pengguna, Admin Rekber tidak memiliki akses melihat password akun game.
-                </span>
-              ) : (
-                " Admin Rekber tidak memiliki akses melihat password game untuk menjaga privasi akun Anda."
-              )}
-            </p>
-          </div>
-        </div>
+      {/* 🧭 Panduan Alur Serah Terima & Pencairan Dana */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+        <h4 className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-900">
+          <ListOrdered className="h-3.5 w-3.5 text-blue-600" aria-hidden="true" />
+          Instruksi Serah Terima Akun
+        </h4>
+        <p className="text-xs leading-relaxed text-slate-600">
+          Segera login menggunakan data di bawah. Jika berhasil, lakukan konfirmasi dan lanjut ke tahap 4.
+        </p>
       </div>
 
       {/* 🚀 Handshake Box: Konfirmasi Selesai & Arahan Lanjut ke Tahap 4 */}
@@ -208,27 +154,45 @@ export function AmankanAkunTabView({
       )}
 
       {/* 2-Hour Auto Release Warning Banner */}
-      {!isAccountConfirmed && !isCompleted && (
-        <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
-          <div className="flex items-center gap-2 text-amber-950">
-            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>
-              <strong>Auto-Release:</strong> Dana otomatis cair ke Penjual dalam{" "}
-              <span className="font-bold text-amber-900 font-mono bg-amber-100 px-1.5 py-0.5 rounded-md">
-                {formatAutoRelease(autoReleaseSeconds)}
-              </span>{" "}
-              jika tidak ada dispute.
-            </span>
+      {role === "BUYER" && !isAccountConfirmed && ["IN_HANDOVER", "PENDING_BUYER_CONFIRM"].includes(transactionStatus) && (
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm">
+          <div className="flex items-start gap-2 text-amber-950">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <p className="leading-relaxed">
+              Lakukan dispute
+              {autoReleaseSeconds !== null && (
+                <>
+                  {" "}sebelum{" "}
+                  <span className="rounded-md bg-amber-100 px-1.5 py-0.5 font-mono font-bold text-amber-900">
+                    {formatAutoRelease(autoReleaseSeconds)}
+                  </span>
+                </>
+              )}{" "}
+              jika tidak bisa membuka akun.
+            </p>
           </div>
-          {role === "BUYER" && onConfirmReceipt && (
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 text-xs"
-            >
-              <CheckCircle2 className="w-4 h-4" /> Konfirmasi Terima Akun
-            </button>
-          )}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {onConfirmReceipt && ["IN_HANDOVER", "PENDING_BUYER_CONFIRM"].includes(transactionStatus) && (
+              <button
+                type="button"
+                onClick={() => void handleConfirm()}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+              >
+                <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                Konfirmasi Akun Diterima
+              </button>
+            )}
+            {onOpenDispute && (
+              <button
+                type="button"
+                onClick={onOpenDispute}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+              >
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+                Dispute
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -242,7 +206,7 @@ export function AmankanAkunTabView({
               Data Login Akun Game
             </h3>
             <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full">
-              {credentials?.loginMethod || "Konami ID"}
+              {credentials?.loginMethod || "Belum tersedia"}
             </span>
           </div>
 
@@ -305,7 +269,7 @@ export function AmankanAkunTabView({
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
               <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-emerald-600" />
-                Koordinasi Kode OTP (2FA)
+                Kode OTP/2FA
               </h3>
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                 Live Logger
@@ -314,7 +278,11 @@ export function AmankanAkunTabView({
 
             {/* Riwayat Log OTP */}
             <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
-              {otpLogs.map((log) => (
+              {otpLogs.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">
+                  Belum ada riwayat kode OTP/2FA untuk transaksi ini.
+                </p>
+              ) : otpLogs.map((log) => (
                 <div
                   key={log.id}
                   className={`p-2.5 rounded-xl text-xs flex items-center justify-between gap-2 border ${
@@ -350,39 +318,10 @@ export function AmankanAkunTabView({
             </div>
           </div>
 
-          {/* Form / Tombol Aksi OTP */}
           <div className="pt-3.5 border-t border-slate-100 mt-3.5">
-            {role === "BUYER" ? (
-              <button
-                type="button"
-                onClick={handleRequestOtp}
-                className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Smartphone className="w-4 h-4" /> Minta Kode OTP Baru ke Penjual
-              </button>
-            ) : role === "SELLER" ? (
-              <form onSubmit={handleSubmitOtp} className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder="Input Kode OTP (6 digit)"
-                  value={inputOtp}
-                  onChange={(e) => setInputOtp(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                />
-                <button
-                  type="submit"
-                  disabled={isSendingOtp || !inputOtp}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" /> Kirim
-                </button>
-              </form>
-            ) : (
-              <p className="text-xs text-slate-400 text-center">
-                Admin mode: Logger pemantauan aktivitas serah terima.
-              </p>
-            )}
+            <p className="text-xs text-slate-500 text-center">
+              Koordinasi kode OTP/2FA belum tersedia untuk transaksi ini.
+            </p>
           </div>
         </div>
       </div>

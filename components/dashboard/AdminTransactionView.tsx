@@ -11,6 +11,7 @@ import { AmankanAkunTabView } from "@/components/dashboard/AmankanAkunTabView";
 import { DisbursementTabView } from "@/components/dashboard/DisbursementTabView";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
 import { FloatingChatJumpButton } from "@/components/dashboard/FloatingChatJumpButton";
+import { ActionPanel } from "@/app/(dashboard)/admin/transactions/[id]/ActionPanel";
 import type { TransactionViewModel } from "@/types/transaction-view-model";
 import type { ChatTabStage } from "@/types";
 import { toast } from "sonner";
@@ -21,7 +22,14 @@ export function AdminTransactionView({
   initialTransaction: TransactionViewModel;
 }) {
   const tx = initialTransaction;
-  const [activeStage, setActiveStage] = useState<ChatTabStage>("REKBER");
+  const [transactionStatus, setTransactionStatus] = useState(tx.status);
+  const [activeStage, setActiveStage] = useState<ChatTabStage>(
+    transactionStatus === "IN_HANDOVER" ||
+      transactionStatus === "PENDING_BUYER_CONFIRM" ||
+      transactionStatus === "COMPLETED"
+      ? "HANDOVER"
+      : "REKBER"
+  );
 
   const handleVerifyPayment = () => {
     toast.success("Pembayaran terverifikasi! Dana resmi diamankan di rekening escrow.");
@@ -55,15 +63,24 @@ export function AdminTransactionView({
                 Item: <strong className="text-slate-800">{tx.listing.title}</strong> · {new Date(tx.createdAt).toLocaleString("id-ID")}
               </p>
             </div>
-            <StatusBadge status={tx.status} />
+            <StatusBadge status={transactionStatus} />
           </div>
         </div>
+
+        <ActionPanel
+          transactionId={tx.id}
+          status={transactionStatus}
+          onStatusChange={(nextStatus) => {
+            setTransactionStatus(nextStatus);
+            if (nextStatus === "IN_HANDOVER") setActiveStage("HANDOVER");
+          }}
+        />
 
         {/* 🌟 4-Stage Progressive Tab Navigation & Timeline Bar */}
         <ProgressiveTransactionTabs
           currentStage={activeStage}
           onSelectStage={setActiveStage}
-          transactionStatus={tx.status}
+          transactionStatus={transactionStatus}
           offerStatus="ACCEPTED"
         />
 
@@ -78,7 +95,7 @@ export function AdminTransactionView({
                 adminFee={tx.adminFee}
                 adminName={tx.admin.user.username}
                 adminRole="Admin Rekber Internal"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 role="ADMIN"
                 onVerifyPayment={handleVerifyPayment}
                 onMoveToHandover={() => setActiveStage("HANDOVER")}
@@ -87,7 +104,7 @@ export function AdminTransactionView({
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="REKBER"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}
@@ -104,16 +121,15 @@ export function AdminTransactionView({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-6 space-y-4">
               <AmankanAkunTabView
-                transactionId={tx.id}
                 role="ADMIN"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 onProceedToDisbursement={() => setActiveStage("DISBURSEMENT")}
               />
             </div>
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="HANDOVER"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}
@@ -133,16 +149,15 @@ export function AdminTransactionView({
                 transactionId={tx.id}
                 price={tx.price}
                 sellerName={tx.listing.seller.username}
-                buyerName={tx.buyer.username}
                 adminName={tx.admin.user.username}
                 role="ADMIN"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
               />
             </div>
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="DISBURSEMENT"
                 defaultRole="ADMIN"
                 defaultUserName={tx.admin.user.username}

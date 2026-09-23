@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { loadEnvConfig } from "@next/env";
+import { TransactionStatus } from "@prisma/client";
 
 loadEnvConfig(process.cwd());
 
@@ -208,6 +209,60 @@ async function main() {
     );
     assert.equal(adminTransaction.status, 200);
 
+    // Payment provider callbacks are outside this transaction-flow fixture.
+    // Move the persisted fixture to the post-payment state before exercising handover.
+    await prisma.transaction.update({
+      where: { id: transactionId },
+      data: { status: TransactionStatus.PAYMENT_CONFIRMED },
+    });
+
+    const startHandover = await request(
+      baseUrl,
+      admin.jar,
+      `/api/transactions/${transactionId}/handover`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "START" }),
+      }
+    );
+    assert.equal(startHandover.status, 200);
+    const handoverStarted = (await startHandover.json()) as {
+      handover: { transactionStatus: string; status: string };
+    };
+    assert.equal(handoverStarted.handover.transactionStatus, "IN_HANDOVER");
+    assert.equal(handoverStarted.handover.status, "IN_PROGRESS");
+
+    const sellerHandover = await request(
+      baseUrl,
+      seller.jar,
+      `/api/transactions/${transactionId}/handover`
+    );
+    assert.equal(sellerHandover.status, 200);
+
+    const confirmHandover = await request(
+      baseUrl,
+      buyer.jar,
+      `/api/transactions/${transactionId}/handover`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "CONFIRM_RECEIPT" }),
+      }
+    );
+    assert.equal(confirmHandover.status, 200);
+    const handoverCompleted = (await confirmHandover.json()) as {
+      handover: { transactionStatus: string; listingStatus: string; status: string };
+    };
+    assert.equal(handoverCompleted.handover.transactionStatus, "COMPLETED");
+    assert.equal(handoverCompleted.handover.listingStatus, "SOLD");
+    assert.equal(handoverCompleted.handover.status, "COMPLETED");
+
+    const listingSold = await request(baseUrl, seller.jar, `/api/listings/${listingId}`);
+    assert.equal(listingSold.status, 200);
+    const listingSoldPayload = (await listingSold.json()) as { listing: { status: string } };
+    assert.equal(listingSoldPayload.listing.status, "SOLD");
+
     const unrelated = await login(baseUrl, "superadmin@rekberin.com", "password123");
     const unrelatedTransaction = await request(
       baseUrl,
@@ -215,6 +270,12 @@ async function main() {
       `/api/transactions/${transactionId}`
     );
     assert.equal(unrelatedTransaction.status, 404);
+    const unrelatedHandover = await request(
+      baseUrl,
+      unrelated.jar,
+      `/api/transactions/${transactionId}/handover`
+    );
+    assert.equal(unrelatedHandover.status, 403);
 
     const buyerPage = await request(
       baseUrl,

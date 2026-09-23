@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -16,19 +16,48 @@ import type { ChatTabStage } from "@/types";
 
 export function SellerTransactionView({ initialTransaction }: { initialTransaction: TransactionViewModel }) {
   const tx = initialTransaction;
+  const [transactionStatus, setTransactionStatus] = useState(tx.status);
+
+  useEffect(() => {
+    if (["COMPLETED", "CANCELLED", "DISPUTED"].includes(transactionStatus)) return;
+
+    let active = true;
+    const refreshHandoverStatus = async () => {
+      try {
+        const response = await fetch(`/api/transactions/${encodeURIComponent(tx.id)}/handover`, {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          handover?: { transactionStatus?: TransactionViewModel["status"] };
+        };
+        if (active && payload.handover?.transactionStatus) {
+          setTransactionStatus(payload.handover.transactionStatus);
+        }
+      } catch {
+        // The transaction page still shows the last known server state.
+      }
+    };
+
+    const interval = window.setInterval(() => void refreshHandoverStatus(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [transactionStatus, tx.id]);
 
   const getInitialStage = (): ChatTabStage => {
-    if (tx.status === "COMPLETED") {
+    if (transactionStatus === "COMPLETED") {
       return "DISBURSEMENT";
     }
     if (
-      tx.status === "PAYMENT_CONFIRMED" ||
-      tx.status === "IN_HANDOVER" ||
-      tx.status === "PENDING_BUYER_CONFIRM"
+      transactionStatus === "PAYMENT_CONFIRMED" ||
+      transactionStatus === "IN_HANDOVER" ||
+      transactionStatus === "PENDING_BUYER_CONFIRM"
     ) {
       return "HANDOVER";
     }
-    if (tx.status === "PENDING_PAYMENT") {
+    if (transactionStatus === "PENDING_PAYMENT") {
       return "REKBER";
     }
     return "NEGOTIATION";
@@ -62,7 +91,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                 Item: <strong className="text-slate-800">{tx.listing.title}</strong> · {new Date(tx.createdAt).toLocaleString("id-ID")}
               </p>
             </div>
-            <StatusBadge status={tx.status} />
+            <StatusBadge status={transactionStatus} />
           </div>
         </div>
 
@@ -70,7 +99,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
         <ProgressiveTransactionTabs
           currentStage={activeStage}
           onSelectStage={setActiveStage}
-          transactionStatus={tx.status}
+          transactionStatus={transactionStatus}
           offerStatus="ACCEPTED"
         />
 
@@ -79,12 +108,9 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-6 space-y-4">
               <NegotiationTabView
-                listingId={tx.listing.id}
                 originalPrice={tx.price}
-                role="SELLER"
                 buyerName={tx.buyer.username}
                 sellerName={tx.listing.seller.username}
-                otherOffersCount={2}
                 isLocked={activeStage !== "NEGOTIATION"}
                 onProceedToCheckout={() => setActiveStage("REKBER")}
               />
@@ -92,7 +118,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="NEGOTIATION"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
@@ -115,7 +141,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                 adminFee={tx.adminFee}
                 adminName={tx.admin.user.username}
                 adminRole="Admin Rekber Internal"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 role="SELLER"
                 onMoveToHandover={() => setActiveStage("HANDOVER")}
               />
@@ -123,7 +149,7 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="REKBER"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
@@ -140,16 +166,16 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-6 space-y-4">
               <AmankanAkunTabView
-                transactionId={tx.id}
                 role="SELLER"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
+                autoReleaseAt={tx.timeline.find((step) => step.label === "Serah terima akun")?.timestamp ?? null}
                 onProceedToDisbursement={() => setActiveStage("DISBURSEMENT")}
               />
             </div>
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="HANDOVER"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}
@@ -169,16 +195,15 @@ export function SellerTransactionView({ initialTransaction }: { initialTransacti
                 transactionId={tx.id}
                 price={tx.price}
                 sellerName={tx.listing.seller.username}
-                buyerName={tx.buyer.username}
                 adminName={tx.admin.user.username}
                 role="SELLER"
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
               />
             </div>
             <div id="transaction-chat-section" className="lg:col-span-6 scroll-mt-20">
               <TransactionChat
                 transactionId={tx.id}
-                transactionStatus={tx.status}
+                transactionStatus={transactionStatus}
                 stage="DISBURSEMENT"
                 defaultRole="SELLER"
                 defaultUserName={tx.listing.seller.username}

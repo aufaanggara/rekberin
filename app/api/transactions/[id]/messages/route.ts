@@ -17,39 +17,6 @@ const transactionSelect = {
   status: true,
 } as const;
 
-interface DemoMessage {
-  id: string;
-  transactionId: string;
-  stage: "NEGOTIATION" | "REKBER" | "HANDOVER";
-  sender: {
-    id: string;
-    username: string;
-    fullName: string;
-    role: "USER" | "ADMIN" | "SUPER_ADMIN";
-  };
-  message: string;
-  createdAt: string;
-}
-
-// In-memory store for fallback / demo transactions (e.g. trx_1)
-const demoMessagesStore: Record<string, DemoMessage[]> = {
-  trx_1: [
-    {
-      id: "msg_init_1",
-      transactionId: "trx_1",
-      stage: "NEGOTIATION",
-      sender: {
-        id: "u_seller2",
-        username: "gamer_jual",
-        fullName: "Dewi Lestari",
-        role: "USER",
-      },
-      message: "Halo! Akun eFootball ini nominus dan siap gas rekber. Mau nego berapa gan?",
-      createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    },
-  ],
-};
-
 async function getSessionUser() {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; role?: string; name?: string; email?: string } | undefined;
@@ -128,31 +95,6 @@ export async function GET(
     return NextResponse.json({ messages: filtered });
   }
 
-  // Fallback demo in-memory messages for trx_1 or test transactions
-  if (params.id === "trx_1" || params.id.startsWith("trx_")) {
-    if (!demoMessagesStore[params.id]) {
-      demoMessagesStore[params.id] = [
-        {
-          id: `msg_init_${Date.now()}`,
-          transactionId: params.id,
-          stage: "NEGOTIATION",
-          sender: {
-            id: "u_seller2",
-            username: "gamer_jual",
-            fullName: "Dewi Lestari",
-            role: "USER",
-          },
-          message: "Halo! Akun eFootball ini nominus dan siap gas rekber. Silakan ajukan harga finalnya ya gan.",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-    }
-
-    const list = demoMessagesStore[params.id] || [];
-    const filtered = stageFilter ? list.filter((m) => m.stage === stageFilter) : list;
-    return NextResponse.json({ messages: filtered });
-  }
-
   return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
 }
 
@@ -223,36 +165,6 @@ export async function POST(
       },
       { status: 201 }
     );
-  }
-
-  // Fallback demo handling for trx_1 or test transactions
-  if (params.id === "trx_1" || params.id.startsWith("trx_")) {
-    if (!demoMessagesStore[params.id]) {
-      demoMessagesStore[params.id] = [];
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { id: true, username: true, fullName: true, role: true },
-    });
-
-    const newDemoMsg: DemoMessage = {
-      id: `msg_${Date.now()}`,
-      transactionId: params.id,
-      stage,
-      sender: {
-        id: user.id,
-        username: dbUser?.username || user.name || "User",
-        fullName: dbUser?.fullName || user.name || "User Rekberin",
-        role: (dbUser?.role as "USER" | "ADMIN" | "SUPER_ADMIN") || "USER",
-      },
-      message: parsed.data.message,
-      createdAt: new Date().toISOString(),
-    };
-
-    demoMessagesStore[params.id].push(newDemoMsg);
-
-    return NextResponse.json({ message: newDemoMsg }, { status: 201 });
   }
 
   return NextResponse.json({ error: "Transaction not found" }, { status: 404 });

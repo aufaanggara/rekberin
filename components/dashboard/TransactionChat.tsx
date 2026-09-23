@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Send, ShieldCheck, User, Store, Lock, Info, Image as ImageIcon, X, ZoomIn, Paperclip, MessageSquare } from "lucide-react";
+import { Send, ShieldCheck, User, Store, Lock, Info, Image as ImageIcon, X, ZoomIn, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import type { ChatSenderRole, TransactionStatus, ChatTabStage } from "@/types";
 import { toast } from "sonner";
@@ -40,12 +40,6 @@ interface ChatMessageView {
   attachmentUrl?: string;
 }
 
-const screenshotPresets = [
-  { label: "Bukti Transfer", url: "/screenshots/efootball_89.jpg" },
-  { label: "Skuad Game", url: "/screenshots/efootball_rich.jpg" },
-  { label: "Data Akun / Unbind", url: "/screenshots/efootball_legends.jpg" },
-];
-
 export function TransactionChat({
   transactionId,
   defaultRole = "BUYER",
@@ -65,7 +59,6 @@ export function TransactionChat({
   const [inputText, setInputText] = useState("");
   const [attachment, setAttachment] = useState<string | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [showPresets, setShowPresets] = useState(false);
 
   // Sync role if stage changes to a 2-way stage
   useEffect(() => {
@@ -75,7 +68,9 @@ export function TransactionChat({
   }, [isThreeWay, defaultRole, activeRole]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const hasCompletedInitialLoadRef = useRef(false);
+  const forceScrollAfterSendRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessageView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -117,15 +112,33 @@ export function TransactionChat({
   };
 
   useEffect(() => {
+    hasCompletedInitialLoadRef.current = false;
+    forceScrollAfterSendRef.current = false;
     void loadMessages(true);
     const interval = window.setInterval(() => void loadMessages(), 5000);
     return () => window.clearInterval(interval);
   }, [transactionId]);
 
-  // Auto-scroll to bottom on new message or typing status
+  // Skip the initial history load so opening a transaction never moves the page.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    if (isLoading) return;
+    if (!hasCompletedInitialLoadRef.current) {
+      hasCompletedInitialLoadRef.current = true;
+      return;
+    }
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const shouldFollowMessages = forceScrollAfterSendRef.current || distanceFromBottom < 80;
+    forceScrollAfterSendRef.current = false;
+
+    if (shouldFollowMessages) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    }
+  }, [isLoading, messages.length]);
 
   const getSenderDisplayName = (role: ChatSenderRole) => {
     if (role === "BUYER") return buyerName;
@@ -146,7 +159,6 @@ export function TransactionChat({
     reader.onload = (uploadEvent) => {
       const dataUrl = uploadEvent.target?.result as string;
       setAttachment(dataUrl);
-      setShowPresets(false);
       toast.success("Foto screenshot siap dikirim!");
     };
     reader.readAsDataURL(file);
@@ -170,9 +182,10 @@ export function TransactionChat({
 
       setInputText("");
       setAttachment(null);
-      setShowPresets(false);
+      forceScrollAfterSendRef.current = true;
       await loadMessages();
     } catch {
+      forceScrollAfterSendRef.current = false;
       toast.error("Pesan gagal dikirim. Coba lagi.");
     } finally {
       setIsSending(false);
@@ -313,7 +326,7 @@ export function TransactionChat({
         </div>
 
         {/* Chat Messages List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/40">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/40">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-sm text-slate-400">
               Memuat percakapan...
@@ -463,7 +476,6 @@ export function TransactionChat({
 
           {loadError && <p className="text-center text-xs text-rose-600">{loadError}</p>}
 
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Attachment Preview Banner before send */}
@@ -481,26 +493,6 @@ export function TransactionChat({
             >
               <X size={15} />
             </button>
-          </div>
-        )}
-
-        {/* Presets popover */}
-        {showPresets && (
-          <div className="p-2.5 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[10px] font-bold uppercase text-slate-500">Pilih Contoh:</span>
-            {screenshotPresets.map((p, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setAttachment(p.url);
-                  setShowPresets(false);
-                }}
-                className="bg-white border border-slate-300 hover:border-blue-500 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer"
-              >
-                {p.label}
-              </button>
-            ))}
           </div>
         )}
 
@@ -545,16 +537,6 @@ export function TransactionChat({
             title="Upload Foto / Screenshot"
           >
             <ImageIcon size={18} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowPresets(!showPresets)}
-            disabled={isChatClosed || isSending}
-            className="p-2 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Pilih Template Gambar"
-          >
-            <Paperclip size={18} />
           </button>
 
           <input

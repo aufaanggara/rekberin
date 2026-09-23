@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Clock, ShieldCheck, QrCode, UploadCloud, AlertCircle, PhoneCall, CheckCircle2, AlertTriangle, ArrowRight, Wallet, Check, Tag } from "lucide-react";
+import { ShieldCheck, AlertTriangle, ArrowRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { TransactionStatus, ChatSenderRole } from "@/types";
-import { toast } from "sonner";
 
 interface RekberTabViewProps {
   transactionId: string;
@@ -35,68 +33,14 @@ export function RekberTabView({
 }: RekberTabViewProps) {
   const totalAmount = price + platformFee + adminFee;
 
-  // 5-Minute Countdown Timer for Payment (only active if PENDING_PAYMENT)
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(300); // 5 minutes = 300s
   const isPaid =
     transactionStatus !== "PENDING_PAYMENT" && transactionStatus !== "CANCELLED";
 
-  const isCompleted = transactionStatus === "COMPLETED";
-
-  const [isDisbursed, setIsDisbursed] = useState(isCompleted);
-
-  useEffect(() => {
-    if (isPaid || transactionStatus === "CANCELLED") return;
-    const interval = setInterval(() => {
-      setTimeLeftSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isPaid, transactionStatus]);
-
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleSummonAdmin = () => {
-    toast.success("Admin Rekber telah dipanggil ke room chat!");
-  };
-
-  const handleDisburseFunds = () => {
-    setIsDisbursed(true);
-    toast.success(`Dana ${formatCurrency(price)} berhasil dicairkan ke saldo/rekening Penjual!`);
-  };
-
   return (
     <div className="space-y-4">
-      {/* ⏱️ Timer 5 Menit Pembayaran (Hanya aktif saat belum bayar di Tab 2) */}
       {!isPaid && transactionStatus === "PENDING_PAYMENT" && (
-        <div className="bg-blue-900 text-white rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-lg border border-blue-700/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5 text-blue-300 animate-pulse" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">
-                Batas Waktu Pembayaran QRIS
-              </span>
-              <h4 className="font-bold text-base sm:text-lg">
-                Selesaikan Pembayaran dalam 5 Menit
-              </h4>
-            </div>
-          </div>
-          <div className="bg-slate-950/70 border border-blue-500/40 px-4 py-2 rounded-xl text-center">
-            <span className="text-[10px] text-slate-400 block uppercase">Sisa Waktu</span>
-            <span className="text-xl font-mono font-extrabold text-amber-300">
-              {formatTimer(timeLeftSeconds)}
-            </span>
-          </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          Status pembayaran: <strong>menunggu konfirmasi</strong>.
         </div>
       )}
 
@@ -141,15 +85,8 @@ export function RekberTabView({
             </div>
           </div>
 
-          {/* Tombol Panggil Admin / Dispute */}
+          {/* Tombol dispute */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSummonAdmin}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-blue-600" /> Panggil Admin
-            </button>
             {onOpenDispute && (
               <button
                 type="button"

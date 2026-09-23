@@ -186,10 +186,10 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                     <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
                       1
                     </span>
-                    <span className="font-bold text-xs text-blue-900">Negosiasi & Deal</span>
+                    <span className="font-bold text-xs text-blue-900">Ajukan Transaksi</span>
                   </div>
                   <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                    Klik <strong>Chat Penjual</strong> untuk mendiskusikan kondisi akun dan ajukan harga penawaran final di ruang chat.
+                    Setelah sepakat dengan penjual, klik <strong>Ajukan Transaksi</strong> dan pilih admin Rekber untuk membuat ruang transaksi.
                   </p>
                 </div>
 
@@ -198,10 +198,10 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                     <span className="w-5 h-5 rounded-full bg-amber-600 text-white font-black text-xs flex items-center justify-center">
                       2
                     </span>
-                    <span className="font-bold text-xs text-amber-900">Rekber & Escrow</span>
+                    <span className="font-bold text-xs text-amber-900">Bayar Rekber</span>
                   </div>
                   <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">
-                    Setelah tawaran di-ACC penjual, pilih Admin Rekber & bayar aman via QRIS (dana ditahan di escrow).
+                    Selesaikan pembayaran melalui ruang transaksi. Dana ditahan di escrow sampai akun diterima.
                   </p>
                 </div>
 
@@ -262,7 +262,7 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                   {formatRupiah(listing.price)}
                 </div>
 
-                {/* Action Button: Chat Penjual */}
+                {/* Action Button: Create a database-backed transaction */}
                 <div className="mb-3">
                   <BuyPanel listingId={listing.id} listingStatus={listing.status} />
                 </div>

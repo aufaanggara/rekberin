@@ -1,134 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { ShieldAlert, Tag, Check, X, ArrowRight, DollarSign, Lock, AlertTriangle, User, Store, ShieldCheck, HelpCircle } from "lucide-react";
+import { ShieldAlert, Tag, Check, X, ArrowRight, Lock, AlertTriangle, User, HelpCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import type { PriceOffer, ChatSenderRole } from "@/types";
-import { Avatar } from "@/components/ui/Avatar";
-import { toast } from "sonner";
+import type { PriceOffer } from "@/types";
 
 interface NegotiationTabViewProps {
-  listingId: string;
   originalPrice: number;
-  role: ChatSenderRole;
   buyerName: string;
   sellerName: string;
   initialOffer?: PriceOffer | null;
   isLocked?: boolean;
-  isSuspendedDueToOtherBuyer?: boolean;
-  otherOffersCount?: number;
-  listingStatus?: "AVAILABLE" | "IN_TRANSACTION" | "SOLD";
   onProceedToCheckout?: (dealPrice: number) => void;
 }
 
 export function NegotiationTabView({
-  listingId,
   originalPrice,
-  role,
   buyerName,
   sellerName,
   initialOffer,
   isLocked = false,
-  isSuspendedDueToOtherBuyer = false,
-  otherOffersCount = 0,
-  listingStatus = "AVAILABLE",
   onProceedToCheckout,
 }: NegotiationTabViewProps) {
-  const [offer, setOffer] = useState<PriceOffer | null>(
-    initialOffer || {
-      id: "off_default",
-      listingId,
-      buyerId: "buyer_1",
-      buyerName,
-      sellerId: "seller_1",
-      originalPrice,
-      offeredPrice: Math.round(originalPrice * 0.9),
-      notes: "Nego santai ya gan, akun siap langsung diamankan.",
-      status: "ACCEPTED",
-      createdAt: new Date().toISOString(),
-    }
-  );
-
-  const [inputPrice, setInputPrice] = useState<string>("");
-  const [inputNotes, setInputNotes] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleCreateOffer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const priceNum = parseInt(inputPrice.replace(/\D/g, ""), 10);
-    if (!priceNum || priceNum <= 0) {
-      toast.error("Masukkan nominal harga penawaran yang valid");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const newOffer: PriceOffer = {
-        id: `off_${Date.now()}`,
-        listingId,
-        buyerId: "buyer_me",
-        buyerName,
-        sellerId: "seller_them",
-        originalPrice,
-        offeredPrice: priceNum,
-        notes: inputNotes || undefined,
-        status: "PENDING",
-        createdAt: new Date().toISOString(),
-      };
-      setOffer(newOffer);
-      setInputPrice("");
-      setInputNotes("");
-      toast.success("Penawaran harga berhasil dikirim ke Penjual!");
-    } catch {
-      toast.error("Gagal mengirim tawaran");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleUpdateOffer = async (status: "ACCEPTED" | "REJECTED") => {
-    if (!offer) return;
-    setOffer({ ...offer, status, updatedAt: new Date().toISOString() });
-    if (status === "ACCEPTED") {
-      toast.success("Tawaran harga disetujui! Pembeli dapat melanjutkan ke Rekber.");
-    } else {
-      toast.info("Tawaran harga ditolak.");
-    }
-  };
+  const offer = initialOffer ?? null;
 
   return (
     <div className="space-y-4">
-      {/* ⚠️ Suspended Banner if Another Buyer Is in Stage 2 Rekber */}
-      {isSuspendedDueToOtherBuyer && (
-        <div className="bg-amber-500/10 border-2 border-amber-400 rounded-2xl p-4 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in duration-300">
-          <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-bold text-xs sm:text-sm text-amber-900 flex items-center gap-1.5">
-              Negosiasi Ditangguhkan Sementara (Locked)
-            </h4>
-            <p className="text-[11px] sm:text-xs text-amber-900/90 leading-relaxed">
-              Akun ini sedang diproses pembayaran Rekber (Tahap 2) oleh calon pembeli lain. Pengajuan penawaran harga dinonaktifkan sementara. Jika transaksi pembeli tersebut batal atau QRIS kedaluwarsa (5 menit), ruang negosiasi ini akan <strong>otomatis aktif kembali</strong>.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ℹ️ Seller Multi-Buyer Info Bar */}
-      {role === "SELLER" && otherOffersCount > 0 && !isSuspendedDueToOtherBuyer && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-blue-900">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping shrink-0" />
-            <span>
-              Terdapat <strong>{otherOffersCount} calon pembeli lain</strong> yang juga sedang menegosiasikan akun ini di room terpisah.
-            </span>
-          </div>
-          <span className="text-[10px] bg-blue-200/80 text-blue-900 px-2 py-0.5 rounded-full font-bold uppercase shrink-0">
-            Multi-Buyer
-          </span>
-        </div>
-      )}
       {/* 🔒 Locked Alert if Negotiation is finalized */}
       {isLocked && (
         <div className="bg-slate-900 text-white border border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md">
@@ -217,26 +113,6 @@ export function NegotiationTabView({
                 )}
               </div>
 
-              {/* Aksi Respon Penjual */}
-              {!isLocked && role === "SELLER" && offer.status === "PENDING" && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateOffer("ACCEPTED")}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    <Check className="w-3.5 h-3.5" /> ACC / Terima Harga
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateOffer("REJECTED")}
-                    className="px-3 py-1.5 bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-700 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
-                  >
-                    <X className="w-3.5 h-3.5" /> Tolak
-                  </button>
-                </div>
-              )}
-
               {/* Aksi Pembeli setelah deal */}
               {offer.status === "ACCEPTED" && (
                 <div className="w-full sm:w-auto">
@@ -252,58 +128,10 @@ export function NegotiationTabView({
             </div>
           </div>
         )}
-
-        {/* Form Ajukan / Ubah Harga Kesepakatan Final (Buyer) */}
-        {!isLocked && role === "BUYER" && (
-          <form onSubmit={handleCreateOffer} className="mt-4 pt-3.5 border-t border-slate-100 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-blue-600" />
-                Input / Ajukan Harga Final Kesepakatan
-              </h4>
-              <span className="text-[10px] text-slate-500">
-                Disepakati lewat chat
-              </span>
-            </div>
-            <div className="grid grid-cols-1 gap-2.5">
-              <div>
-                <label className="text-[11px] font-medium text-slate-600 mb-1 block">
-                  Nominal Harga Final yang Disepakati (Rp)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-xs text-slate-400 font-bold">Rp</span>
-                  <input
-                    type="number"
-                    placeholder="Contoh: 300000"
-                    value={inputPrice}
-                    onChange={(e) => setInputPrice(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-hidden font-mono font-bold"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] font-medium text-slate-600 mb-1 block">
-                  Catatan Kesepakatan (Opsional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Sesuai hasil obrolan chat ya gan..."
-                  value={inputNotes}
-                  onChange={(e) => setInputNotes(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={isSubmitting || !inputPrice}
-                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-              >
-                {isSubmitting ? "Mengirim..." : "Kirim Harga Final ke Penjual"}
-              </button>
-            </div>
-          </form>
+        {!offer && (
+          <p className="mt-3.5 border-t border-slate-100 pt-3.5 text-xs text-slate-500">
+            Belum ada data penawaran yang tersimpan untuk transaksi ini.
+          </p>
         )}
       </div>
 
