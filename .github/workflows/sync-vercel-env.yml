@@ -1,0 +1,106 @@
+name: Sync Environment Variables to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.env.example'
+  workflow_dispatch:
+    inputs:
+      env_file:
+        description: 'File path containing environment variables'
+        required: true
+        default: '.env.example'
+      target_environment:
+        description: 'Target Vercel environment (production, preview, development, or all)'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+          - development
+          - all
+
+jobs:
+  sync-env:
+    name: Sync Variables to Vercel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Link Vercel Project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not defined in GitHub repository secrets."
+            exit 1
+          fi
+
+          if [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "Linking project using VERCEL_ORG_ID and VERCEL_PROJECT_ID..."
+            vercel link --yes --token="$VERCEL_TOKEN"
+          else
+            echo "VERCEL_ORG_ID or VERCEL_PROJECT_ID not set; linking via default scope if configured."
+          fi
+
+      - name: Sync Environment Variables
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ENV_FILE: ${{ github.event.inputs.env_file || '.env.example' }}
+          TARGET_ENV: ${{ github.event.inputs.target_environment || 'production' }}
+        run: |
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "::error::Environment file '$ENV_FILE' not found!"
+            exit 1
+          fi
+
+          echo "Reading environment variable keys from $ENV_FILE..."
+
+          # Determine target environments
+          if [ "$TARGET_ENV" = "all" ]; then
+            ENVIRONMENTS=("production" "preview" "development")
+          else
+            ENVIRONMENTS=("$TARGET_ENV")
+          fi
+
+          while IFS='=' read -r key value || [ -n "$key" ]; do
+            # Skip empty lines and comment lines
+            [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+
+            # Clean key and value
+            clean_key=$(echo "$key" | xargs)
+            clean_value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+
+            if [ -z "$clean_key" ]; then
+              continue
+            fi
+
+            echo "Synchronizing key: $clean_key"
+
+            for env_target in "${ENVIRONMENTS[@]}"; do
+              # Remove existing variable first to avoid conflict if it already exists, then re-add
+              vercel env rm "$clean_key" "$env_target" --yes --token="$VERCEL_TOKEN" 2>/dev/null || true
+
+              # Add variable value (read from value in file or fallback placeholder)
+              if [ -n "$clean_value" ]; then
+                printf "%s" "$clean_value" | vercel env add "$clean_key" "$env_target" --token="$VERCEL_TOKEN"
+              fi
+            done
+          done < "$ENV_FILE"
+
+          echo "Environment variables sync completed successfully."

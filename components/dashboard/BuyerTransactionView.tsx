@@ -197,6 +197,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="NEGOTIATION"
                 defaultRole="BUYER"
                 defaultUserName={tx.buyer.username}
                 buyerName={tx.buyer.username}
@@ -228,6 +229,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="REKBER"
                 defaultRole="BUYER"
                 defaultUserName={tx.buyer.username}
                 buyerName={tx.buyer.username}
@@ -254,6 +256,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="HANDOVER"
                 defaultRole="BUYER"
                 defaultUserName={tx.buyer.username}
                 buyerName={tx.buyer.username}
@@ -282,6 +285,7 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
               <TransactionChat
                 transactionId={tx.id}
                 transactionStatus={tx.status}
+                stage="DISBURSEMENT"
                 defaultRole="BUYER"
                 defaultUserName={tx.buyer.username}
                 buyerName={tx.buyer.username}

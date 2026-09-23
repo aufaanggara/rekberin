@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Send, ShieldCheck, User, Store, Lock, Info, Image as ImageIcon, X, ZoomIn, Paperclip, MessageSquare } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import type { ChatSenderRole, TransactionStatus } from "@/types";
+import type { ChatSenderRole, TransactionStatus, ChatTabStage } from "@/types";
 import { toast } from "sonner";
 
 interface TransactionChatProps {
@@ -15,6 +15,7 @@ interface TransactionChatProps {
   sellerName: string;
   adminName: string;
   transactionStatus?: TransactionStatus;
+  stage?: ChatTabStage;
 }
 
 interface ApiChatMessage {
@@ -53,12 +54,25 @@ export function TransactionChat({
   sellerName,
   adminName,
   transactionStatus,
+  stage,
 }: TransactionChatProps) {
-  const [activeRole, setActiveRole] = useState<ChatSenderRole>(defaultRole);
+  // Stage 1 (NEGOTIATION) and Stage 3 (HANDOVER) are 2-way (Buyer & Seller).
+  // Stage 2 (REKBER) and Stage 4 (DISBURSEMENT) are 3-way (Buyer, Seller, Admin Escrow).
+  const isThreeWay = stage ? stage === "REKBER" || stage === "DISBURSEMENT" : defaultRole === "ADMIN";
+
+  const initialRole = !isThreeWay && defaultRole === "ADMIN" ? "BUYER" : defaultRole;
+  const [activeRole, setActiveRole] = useState<ChatSenderRole>(initialRole);
   const [inputText, setInputText] = useState("");
   const [attachment, setAttachment] = useState<string | null>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState(false);
+
+  // Sync role if stage changes to a 2-way stage
+  useEffect(() => {
+    if (!isThreeWay && activeRole === "ADMIN") {
+      setActiveRole(defaultRole === "ADMIN" ? "BUYER" : defaultRole);
+    }
+  }, [isThreeWay, defaultRole, activeRole]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,6 +204,28 @@ export function TransactionChat({
     ],
   };
 
+  const chatHeaderTitle =
+    stage === "HANDOVER"
+      ? "Room Chat Serah Terima Akun (2 Arah Privat)"
+      : stage === "NEGOTIATION"
+      ? "Room Negosiasi & Penawaran (2 Arah)"
+      : stage === "DISBURSEMENT"
+      ? "Room Pencairan Dana (3 Arah)"
+      : isThreeWay
+      ? "Room Chat Transaksi (3 Arah)"
+      : "Room Chat Transaksi (2 Arah)";
+
+  const chatHeaderSubtitle =
+    stage === "HANDOVER"
+      ? "Komunikasi privat langsung antara Pembeli dan Penjual untuk serah terima kredensial & OTP"
+      : stage === "NEGOTIATION"
+      ? "Komunikasi langsung antara Pembeli dan Penjual untuk negosiasi harga"
+      : stage === "DISBURSEMENT"
+      ? "Koordinasi penutupan transaksi dan pencairan dana bersama Admin Rekber"
+      : isThreeWay
+      ? "Komunikasi terpantau aman antara Pembeli, Penjual, dan Admin Rekber"
+      : "Komunikasi langsung antara Pembeli dan Penjual";
+
   return (
     <>
       <div id="transaction-chat-section" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[560px] sm:h-[640px] scroll-mt-20">
@@ -199,11 +235,11 @@ export function TransactionChat({
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <h3 className="font-bold text-sm sm:text-base tracking-tight">
-                Room Chat Transaksi (3 Arah)
+                {chatHeaderTitle}
               </h3>
             </div>
             <p className="text-[11px] text-slate-300 hidden sm:block mt-0.5">
-              Komunikasi terpantau aman antara Pembeli, Penjual, dan Admin Rekber
+              {chatHeaderSubtitle}
             </p>
           </div>
 
@@ -232,17 +268,19 @@ export function TransactionChat({
             >
               Penjual
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveRole("ADMIN")}
-              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                activeRole === "ADMIN"
-                  ? "bg-amber-500 text-slate-950 shadow-xs"
-                  : "text-slate-300 hover:text-white"
-              }`}
-            >
-              Admin
-            </button>
+            {isThreeWay && (
+              <button
+                type="button"
+                onClick={() => setActiveRole("ADMIN")}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+                  activeRole === "ADMIN"
+                    ? "bg-amber-500 text-slate-950 shadow-xs"
+                    : "text-slate-300 hover:text-white"
+                }`}
+              >
+                Admin
+              </button>
+            )}
           </div>
         </div>
 
@@ -261,10 +299,17 @@ export function TransactionChat({
               <span className="truncate max-w-[80px] sm:max-w-none">{sellerName}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-amber-800 font-semibold bg-amber-100/70 border border-amber-200 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px]">
-            <ShieldCheck size={12} className="text-amber-600" />
-            <span>Escrow: {adminName}</span>
-          </div>
+          {isThreeWay ? (
+            <div className="flex items-center gap-1 text-amber-800 font-semibold bg-amber-100/70 border border-amber-200 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px]">
+              <ShieldCheck size={12} className="text-amber-600" />
+              <span>Escrow: {adminName}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-slate-700 font-semibold bg-slate-200/80 border border-slate-300 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px]">
+              <Lock size={12} className="text-slate-600" />
+              <span>Privat 2 Arah</span>
+            </div>
+          )}
         </div>
 
         {/* Chat Messages List */}
