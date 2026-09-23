@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -102,11 +101,7 @@ export default function UserTransactionsPage() {
   ).length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-8">
-      <div className="hidden lg:block">
-        <DashboardSidebar role="user" />
-      </div>
-
+    <div className="min-w-0 flex-1">
       <div className="flex-1 space-y-6" aria-busy={isLoading || viewerId === undefined}>
         {/* Top Back Link */}
         <div>

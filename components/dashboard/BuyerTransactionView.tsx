@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
-import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { TransactionChat } from "@/components/dashboard/TransactionChat";
 import { ProgressiveTransactionTabs } from "@/components/dashboard/ProgressiveTransactionTabs";
@@ -82,13 +81,10 @@ export function BuyerTransactionView({ initialTransaction }: { initialTransactio
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10 flex flex-col lg:flex-row gap-8">
+    <div className="min-w-0 flex-1">
       {/* 🚀 Dynamic Floating Chat Button */}
       <FloatingChatJumpButton targetId="transaction-chat-section" theme="blue" />
 
-      <div className="hidden lg:block">
-        <DashboardSidebar role="user" />
-      </div>
       <div className="flex-1 space-y-6">
         {/* Top Header */}
         <div>

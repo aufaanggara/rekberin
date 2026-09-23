@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import { DashboardSidebar } from "@/components/layout/DashboardSidebar";
 import { useTransactions } from "@/hooks/useTransactions";
 import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 import { formatRupiah } from "@/lib/utils";
@@ -232,11 +231,7 @@ export default function UserChatInboxPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-8">
-      <div className="hidden lg:block">
-        <DashboardSidebar role="user" />
-      </div>
-
+    <div className="min-w-0 flex-1">
       <div className="flex-1 space-y-6">
         {/* Top Back Link */}
         <div>

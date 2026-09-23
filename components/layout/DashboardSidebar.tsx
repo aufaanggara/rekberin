@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -113,6 +113,9 @@ function SidebarNav({
         {staticConfig.items.map((item) => {
           const isChat = item.href === "/user/chat";
           const isTransactionsHistory = item.href === "/user/transactions";
+          const href = role === "user" && currentTab === "seller" && (isChat || isTransactionsHistory)
+            ? `${item.href}?tab=seller`
+            : item.href;
           const isWithdraw = item.href.includes("view=withdraw");
           const isWarranty = item.href.includes("view=warranty");
           const isDashboard =
@@ -150,7 +153,7 @@ function SidebarNav({
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={cn(
                 "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all",
                 active
@@ -211,9 +214,22 @@ function DashboardSidebarContent({
   unrepliedCount,
 }: DashboardSidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get("tab");
-  const currentTab = activeTab ?? (tabParam === "seller" ? "seller" : "buyer");
+  const viewParam = searchParams?.get("view");
+  const [selectedTab, setSelectedTab] = useState<"buyer" | "seller">(
+    tabParam === "seller" || viewParam === "withdraw" ? "seller" : "buyer"
+  );
+  const currentTab = activeTab ?? selectedTab;
+
+  useEffect(() => {
+    if (tabParam === "seller" || viewParam === "withdraw" || viewParam === "chat" || viewParam === "orders") {
+      setSelectedTab("seller");
+    } else if (tabParam === "buyer" || viewParam === "warranty" || pathname === "/user") {
+      setSelectedTab("buyer");
+    }
+  }, [pathname, tabParam, viewParam]);
 
   const effectiveConfig =
     role === "user"
@@ -248,11 +264,15 @@ function DashboardSidebarContent({
         : "Pembeli";
 
   const changeTab = (tab: "buyer" | "seller") => {
+    setSelectedTab(tab);
     if (onTabChange) {
       onTabChange(tab);
       return;
     }
-    router.push(tab === "seller" ? "/user?tab=seller" : "/user");
+    const destination = pathname === "/user/chat" || pathname === "/user/transactions"
+      ? pathname
+      : "/user";
+    router.push(`${destination}${tab === "seller" ? "?tab=seller" : ""}`);
   };
 
   return (
