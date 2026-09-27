@@ -16,14 +16,14 @@ development_duration: 14 calendar days
 testing_duration: 7 calendar days
 assignment_rule: exactly_one_assignee_per_issue
 team_model: 4 fullstack developers
-current_plan_status: implementation_in_progress; DEV-01 completed_on_feature_branch; remaining_issues_follow_backlog
+current_plan_status: DEV-03 implemented_locally_uncommitted_on_feature_branch; working_tree_has_uncommitted_changes
 ```
 
 ## AI_OPERATING_RULES
 
 1. Use `Rekberin` as the current product name. Treat `RekberGG` as a legacy/PRD label only.
-2. Treat the latest revisions in `CURRENT_DECISIONS` as higher priority than superseded brainstorming notes in the PRD.
-3. Before proposing implementation, inspect the repository and preserve existing UI where practical. Existing UI is mostly present but still uses dummy data; the main engineering goal is integration with real database/API data.
+2. Treat the newest dated revision in `CURRENT_DECISIONS` and the newest implementation snapshot as authoritative; older dated flow notes are historical when superseded.
+3. Before proposing implementation, inspect the latest implementation snapshot and repository. Preserve existing UI where practical and use real database/API data when the issue requires it.
 4. Do not silently reassign an issue, add a second assignee, expand scope, or change a business rule. Flag the change for PM/team approval.
 5. Keep issue scope simple enough for a student team. Use the existing issue IDs and ownership unless the team explicitly approves a revision.
 6. Do not assume production payment settlement, legal compliance, or real-money readiness. Dynamic QRIS is an experimental sandbox target in this phase.
@@ -31,6 +31,7 @@ current_plan_status: implementation_in_progress; DEV-01 completed_on_feature_bra
 8. If repository state conflicts with this file, report the conflict and identify the affected issue; do not overwrite working code blindly.
 9. For future issue descriptions, use the exact structure in `ISSUE_TEMPLATE`.
 10. Planning questions must not mutate the repository. Implement changes only when explicitly requested.
+11. Use `CURRENT_IMPLEMENTATION_STATE_2026_09_27` for the latest issue and repository state. Do not describe its working-tree changes as committed or merged.
 
 ## SOURCE_PRIORITY
 
@@ -112,6 +113,102 @@ progressive_chat_and_transaction_flow_2026_09_21:
   review_mode:
     status: all_stages_1_to_4_unlocked_for_testing
     note: Tahap 1 sampai 4 saat ini dibuka kuncinya (unlocked) agar developer (Afiq/team) dapat bebas mengklik dan mereview seluruh tampilan antarmuka dan form tanpa terblokir status transaksi.
+
+issue_03_revision_2026_09_27:
+  supersedes: progressive_chat_and_transaction_flow_2026_09_21
+  negotiation: buyer_and_seller_use_private_listing_conversation; seller_acceptance_allows_buyer_to_continue_to_payment
+  transaction_workspace: chat_and_current_step_are_adjacent_tabs_on_mobile_and_desktop; selecting_a_tab_replaces_the_active_page_header_and_content
+  handover_data_exchange: ordinary_web_chat_or_whatsapp; no_web_feature_for_sending_or_storing_otp_email_or_password
+  handover_deadline: two_hours_after_payment_confirmation
+  payout: direct_transfer_is_the_target; current_implementation_records_a_dummy_payout_only; no_provider_is_configured
+  dispute: buyer_can_report_a_problem; admin_joins_transaction_chat_and_can_resume_or_cancel
+  dashboard: buyer_and_seller_have_ongoing_and_history_views; account_settings_are_available; no_balance_withdrawal_or_warranty_menu
+  account_settings: [username, full_name, whatsapp_number_with_country_code, profile_picture]
+```
+
+## CURRENT_IMPLEMENTATION_STATE_2026_09_27
+
+> Latest snapshot for the active DEV-03 work. It supersedes the 2026-09-22 snapshot and older progress entries where they differ. Historical issue notes remain below for context.
+
+```yaml
+issue_id: DEV-03
+branch: feat/issue-03-account-handover
+base_branch: origin/main
+implementation_status: implemented_locally_uncommitted
+commit_status: no_commit_or_push
+working_tree: contains_uncommitted_issue_03_changes; preserve_existing_changes
+
+buyer_seller_flow:
+  listing_entry: buyer_can_open_a_private_conversation_with_the_seller
+  negotiation: buyer_can_send_offer; seller_can_accept_or_reject; accepted_offer_can_continue_to_payment
+  listing_lock: listing_locks_when_a_transaction_is_started_for_payment
+  payment: Midtrans_QRIS_sandbox; payment_confirmation_starts_the_handover_deadline
+
+handover:
+  start: assigned_admin_can_start_after_payment_confirmation
+  visibility: transaction_participants_can_see_handover_status
+  buyer_actions: [confirm_account_received, report_problem]
+  confirm_received: transaction_becomes_COMPLETED; listing_becomes_SOLD
+  deadline_hours_from_payment_confirmation: 2
+  deadline_expiry: automatic_dummy_seller_payout_and_transaction_completion
+  report_problem: transaction_becomes_DISPUTED; admin_is_added_to_transaction_chat
+  admin_resolution: [resume_handover, cancel_transaction]
+  cancel_result: dummy_buyer_refund; listing_returns_to_AVAILABLE
+  payout_provider: none; dummy_records_only; no_real_transfer_is_sent
+
+account_data_exchange:
+  options: [ordinary_web_chat, WhatsApp]
+  web_credential_delivery: unsupported_by_design
+  prohibited_web_fields: [OTP, email_password, account_password]
+  saved_whatsapp_format: country_code_and_digits_without_plus; Indonesia_default_prefix: "62"
+
+transaction_ui:
+  mobile_and_desktop: true
+  workspace_tabs: [chat, current_transaction_step]
+  tab_switch: active_page_header_and_content_follow_selected_tab
+  mobile_child_pages: dashboard_return_action_without_user_sidebar
+
+user_dashboard:
+  default_view: ongoing_transactions
+  buyer_views: [ongoing_transactions_and_negotiations, completed_transaction_history]
+  seller_views: [ongoing_sales_and_negotiations, completed_sale_history]
+  account_settings: [username, full_name, WhatsApp_country_code_and_number, profile_picture]
+  removed_navigation: [generic_dashboard_home, balance_and_withdrawals, warranty_guide]
+  mobile_layout: profile_next_to_home_return; sticky_dashboard_header; no_activity_summary_card; centered_wide_bottom_navigation
+
+account_settings_implementation:
+  username: unique_lowercase_3_to_30_characters
+  email: read_only
+  whatsapp: country_picker_defaults_to_Indonesia_and_persists_in_international_digits_format
+  avatar: public_Supabase_avatars_bucket; JPEG_PNG_or_WebP; maximum_2_MiB
+
+dashboard_loading:
+  endpoint: /api/user/activity
+  access: authenticated_user_only; returns_only_that_users_conversations_and_transactions
+  client_cache: keyed_by_user_id; 15_second_stale_time; background_refresh; cleared_on_identity_change
+  returning_from_child_page: invalidate_activity_cache
+
+database:
+  migrations_applied:
+    - 20260926160000_marketplace_handover_flow
+    - 20260927000000_user_whatsapp_settings
+  old_incomplete_transaction_cleanup_2026_09_27:
+    cutoff_local_time: "2026-09-27 01:21:46 Asia/Jakarta"
+    removed_transactions: 4
+    removed_related_records: {payments: 3, chat_messages: 8}
+    affected_listings_restored_to_AVAILABLE: 3
+    matching_old_non_completed_transactions_remaining: 0
+
+qris_test_notification:
+  enabled_only_when: MIDTRANS_QRIS_NTFY_TEST_is_true_and_Midtrans_is_in_sandbox
+  notification_topic_or_credentials: do_not_store_in_this_file
+
+verification_before_latest_cleanup:
+  tests: 20_unit_and_11_database_integration_passed
+  typescript: passed
+  production_build: passed
+  later_activity_cache_change: focused_test_typecheck_and_production_build_passed
+  browser_visual_qa: not_confirmed
 ```
 
 ## CURRENT_IMPLEMENTATION_STATE_2026_09_22
@@ -486,6 +583,9 @@ dod:
 
 ```yaml
 type: development
+implementation_status: implemented_locally_uncommitted
+implementation_branch: feat/issue-03-account-handover
+latest_implementation_snapshot: CURRENT_IMPLEMENTATION_STATE_2026_09_27
 assignee: Ibrahim
 estimate_days: 3
 depends_on: [DEV-01, DEV-02]
@@ -1499,13 +1599,13 @@ unit_tests: 6/6 passed
 | DEV-08 Marketplace Integration | 🔲 Not started | - | Assigned: Bagas |
 | DEV-01 Transaction Flow | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-02 QRIS/Payment | ✅ Committed and pushed; Sandbox verified | `feat/issue-02-midtrans-qris` | Assigned: Ibrahim. Commit `f546d1e`; Core API QRIS; parser handles provider 404 before first charge; webhook path configured. |
-| DEV-03 Handover | 🔲 Not started | - | Assigned: Ibrahim |
+| DEV-03 Handover | ✅ Implemented locally, uncommitted | `feat/issue-03-account-handover` | Admin handover, buyer confirmation, 2-hour dummy auto payout, dispute resolution, and listing/transaction state updates; see latest snapshot. |
 | DEV-04 Dispute | 🔲 Not started | - | Assigned: Ibrahim |
 | DEV-09 Chat | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Polling chat, dynamic floating chat FAB, mobile layout polished |
 | DEV-10 Review/Rating | ✅ Completed | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. API Review (`/api/transactions/[id]/reviews`) + Form Rating 1-5 Bintang di Tahap 4 |
 | DEV-11 Notifications | ✅ Done (UI/UX Polished) | `feat/afiq-mobile-ui-ux-refinements` | Assigned: Afiq. Toast feedback, clean back-to-dashboard navigation, error-free states |
 | DEV-12 CI/CD | ✅ Completed | `main` | Assigned: Afiq. GitHub Actions workflow Node 22 dengan typecheck, npm test, dan build |
-| DEV-13 Dashboard User | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. Unifikasi Dashboard Buyer & Seller jadi 1 dashboard (`/user`). |
+| DEV-13 Dashboard User | ✅ Integrated locally, uncommitted | `feat/issue-03-account-handover` | Buyer/seller ongoing and history views, account settings, responsive transaction workspace, and cached user activity; see latest snapshot. |
 | DEV-14 Dashboard Seller | 🔄 Merged ke DEV-13 | `dashboard` | Dilebur ke dalam DEV-13 (Arsitektur Unified User Dashboard) |
 | DEV-15 Dashboard Admin | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |
 | DEV-16 Dashboard Statistics | 🟡 UI Ready (dummy data) | `dashboard` | Assigned: Aufa. UI selesai, perlu integrasi API |

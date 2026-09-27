@@ -1,7 +1,9 @@
 import { ListingStatus, PaymentStatus, Prisma, TransactionStatus, type Payment } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { handoverDeadline } from "@/lib/handover-policy";
 import { calculatePaymentAmount, createPaymentOrderId } from "@/lib/payments/payment-domain";
 import { createMidtransGateway, type MidtransGateway, type MidtransTransaction } from "@/lib/payments/midtrans";
+import { sendTestQrisNotification } from "@/lib/payments/qris-test-notification";
 import type { PaymentApiResponse } from "@/types/payment-api";
 
 export class PaymentServiceError extends Error {
@@ -63,7 +65,10 @@ async function applyReconciliation(db: Prisma.TransactionClient, paymentId: stri
   const transactionIsAwaitingPayment = payment.transaction.status === TransactionStatus.PENDING_PAYMENT;
   const confirmsTransaction = nextStatus === PaymentStatus.SETTLEMENT && transactionIsAwaitingPayment;
   const cancelsTransaction = terminalFailure && transactionIsAwaitingPayment;
-  const txStatus = confirmsTransaction ? TransactionStatus.PAYMENT_CONFIRMED : cancelsTransaction ? TransactionStatus.CANCELLED : payment.transaction.status;
+  const txStatus = confirmsTransaction ? TransactionStatus.IN_HANDOVER : cancelsTransaction ? TransactionStatus.CANCELLED : payment.transaction.status;
+  // The buyer's two-hour window starts when our server confirms settlement,
+  // which can be later than the payment provider's original paid timestamp.
+  const handoverStartedAt = now;
   const listingStatus = cancelsTransaction ? ListingStatus.AVAILABLE : undefined;
   const transitionLog = confirmsTransaction
     ? "PAYMENT_CONFIRMED"
@@ -78,7 +83,20 @@ async function applyReconciliation(db: Prisma.TransactionClient, paymentId: stri
             : null;
   await db.payment.update({ where: { id: payment.id }, data: { status: nextStatus, providerTransactionId: provider.transactionId ?? undefined, providerPaymentType: provider.paymentType, qrCodeUrl: provider.qrCodeUrl ?? undefined, expiresAt: provider.expiresAt ?? undefined, paidAt: nextStatus === PaymentStatus.SETTLEMENT ? (provider.paidAt ?? now) : undefined, lastSyncedAt: now, lastNotifiedAt: notified ? now : undefined } });
   if (confirmsTransaction || cancelsTransaction) {
-    await db.transaction.update({ where: { id: payment.transactionId }, data: { status: txStatus, ...(transitionLog ? { logs: { push: { action: transitionLog, actorId: "midtrans", timestamp: now.toISOString() } } } : {}) } });
+    await db.transaction.update({ where: { id: payment.transactionId }, data: {
+      status: txStatus,
+      ...(confirmsTransaction ? {
+        handoverStartedAt,
+        handoverDeadlineAt: handoverDeadline(handoverStartedAt),
+      } : {}),
+      ...(transitionLog ? { logs: { push: { action: transitionLog, actorId: "midtrans", timestamp: now.toISOString() } } } : {}),
+    } });
+    if (confirmsTransaction) {
+      await db.transaction.update({
+        where: { id: payment.transactionId },
+        data: { logs: { push: { action: "HANDOVER_STARTED", actorId: "system", timestamp: handoverStartedAt.toISOString() } } },
+      });
+    }
   }
   if (listingStatus) await db.listing.updateMany({ where: { id: payment.transaction.listingId, status: ListingStatus.IN_TRANSACTION }, data: { status: listingStatus } });
   return db.payment.findUniqueOrThrow({ where: { id: payment.id } });
@@ -91,7 +109,7 @@ export async function getPaymentForBuyer(transactionId: string, buyerId: string)
 
 export async function createOrRecoverPayment(transactionId: string, buyerId: string, gateway: MidtransGateway = createMidtransGateway()) {
   try {
-    const persistedPayment = await prisma.$transaction(async (db) => {
+    const result = await prisma.$transaction(async (db) => {
       await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${transactionId}))`;
       const transaction = await db.transaction.findFirst({ where: { id: transactionId, buyerId }, include: { listing: true, payment: true } });
       if (!transaction) throw new PaymentServiceError(404, "Transaksi tidak ditemukan.", "TRANSACTION_NOT_FOUND");
@@ -100,7 +118,7 @@ export async function createOrRecoverPayment(transactionId: string, buyerId: str
       const orderId = createPaymentOrderId(transaction.id);
       let payment = transaction.payment;
       if (payment && payment.amount !== amount) throw new PaymentServiceError(409, "Nominal payment transaksi sudah berubah.", "PAYMENT_AMOUNT_MISMATCH");
-      if (payment?.qrCodeUrl) return payment;
+      if (payment?.qrCodeUrl) return { payment, shouldNotify: false };
       if (!payment) payment = await db.payment.create({ data: { transactionId: transaction.id, orderId, amount, currency: "IDR", acquirer: "gopay" } });
       const existing =
         await gateway.getTransactionStatus(payment.orderId);
@@ -123,14 +141,22 @@ export async function createOrRecoverPayment(transactionId: string, buyerId: str
 
       assertProviderMatches(payment, provider);
 
-      return applyReconciliation(
+      const reconciled = await applyReconciliation(
         db,
         payment.id,
         provider,
         false
       );
+      return { payment: reconciled, shouldNotify: !!reconciled.qrCodeUrl };
     }, PAYMENT_CREATE_TRANSACTION_OPTIONS);
-    return publicPayment(persistedPayment);
+    if (result.shouldNotify && result.payment.qrCodeUrl) {
+      try {
+        await sendTestQrisNotification(result.payment.qrCodeUrl);
+      } catch (error) {
+        console.warn("QRIS test notification could not be sent:", error instanceof Error ? error.message : "unknown error");
+      }
+    }
+    return publicPayment(result.payment);
   } catch (error) {
     if (error instanceof PaymentServiceError) throw error;
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

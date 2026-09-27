@@ -15,6 +15,7 @@ model User {
   fullName    String
   password    String?  // Nullable: untuk fleksibilitas OAuth di masa depan
   avatarUrl   String?
+  whatsappNumber String?
   role        Role     @default(USER)
   isVerified  Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -28,6 +29,10 @@ model User {
   reviewsGiven          Review[]      @relation("ReviewGiver")
   reviewsReceived       Review[]      @relation("ReviewReceiver")
   chatMessages          ChatMessage[]
+  negotiationsAsBuyer   Negotiation[] @relation("NegotiationBuyer")
+  negotiationsAsSeller  Negotiation[] @relation("NegotiationSeller")
+  negotiationMessages   NegotiationMessage[]
+  escrowTransfers       EscrowTransfer[]
 }
 
 enum Role {
@@ -68,6 +73,7 @@ model Listing {
   updatedAt   DateTime      @updatedAt
 
   transactions Transaction[]
+  negotiations Negotiation[]
 }
 
 enum ListingStatus {
@@ -79,6 +85,8 @@ enum ListingStatus {
 
 model Transaction {
   id          String            @id @default(cuid())
+  negotiationId String?         @unique
+  negotiation Negotiation?      @relation(fields: [negotiationId], references: [id])
   listingId   String
   listing     Listing           @relation(fields: [listingId], references: [id])
   buyerId     String
@@ -95,13 +103,81 @@ model Transaction {
   disputeReason String?         // Disimpan di sini saat status = DISPUTED
   proofUrls   String[]
   logs        Json[]            // Timeline activity: [{action, actor, timestamp}]
-  checklist   Json              // Handover checklist: {email, password, twoFA, etc}
+  checklist   Json              // Legacy transaction checklist; no account secrets are collected by this flow
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+  handoverStartedAt DateTime?
+  handoverDeadlineAt DateTime?
+  handoverPausedAt DateTime?
+  adminJoinedAt DateTime?
+  buyerWhatsapp String?
+  sellerWhatsapp String?
 
   reviews      Review[]
   chatMessages ChatMessage[]
   payment      Payment?
+  escrowTransfer EscrowTransfer?
+
+  @@index([status, handoverDeadlineAt])
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Negotiation {
+  id String @id @default(cuid())
+  listingId String
+  listing Listing @relation(fields: [listingId], references: [id])
+  buyerId String
+  buyer User @relation("NegotiationBuyer", fields: [buyerId], references: [id])
+  sellerId String
+  seller User @relation("NegotiationSeller", fields: [sellerId], references: [id])
+  offeredPrice Int?
+  offerNotes String?
+  offerStatus OfferStatus @default(PENDING)
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages NegotiationMessage[]
+  transaction Transaction?
+
+  @@unique([listingId, buyerId])
+  @@index([sellerId, updatedAt])
+}
+
+model NegotiationMessage {
+  id String @id @default(cuid())
+  negotiationId String
+  negotiation Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  senderId String
+  sender User @relation(fields: [senderId], references: [id])
+  message String
+  createdAt DateTime @default(now())
+
+  @@index([negotiationId, createdAt])
+}
+
+enum EscrowTransferKind {
+  SELLER_PAYOUT
+  BUYER_REFUND
+}
+
+model EscrowTransfer {
+  id String @id @default(cuid())
+  transactionId String @unique
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  recipientId String
+  recipient User @relation(fields: [recipientId], references: [id])
+  kind EscrowTransferKind
+  amount Int
+  provider String @default("DUMMY")
+  status String @default("SIMULATED")
+  reference String @unique
+  createdAt DateTime @default(now())
 }
 
 enum TransactionStatus {

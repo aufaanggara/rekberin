@@ -5,7 +5,24 @@ import { createMidtransGateway, isSafeMidtransQrCodeUrl, parseMidtransTransactio
 import { parseMidtransWebhookPayload, verifyMidtransNotificationSignature } from "@/lib/payments/midtrans-webhook";
 import { createHash } from "node:crypto";
 import { reconcilePaymentData } from "@/lib/payments/payment-service";
+import { sendTestQrisNotification } from "@/lib/payments/qris-test-notification";
 import { POST as midtransWebhookPost } from "@/app/api/webhooks/midtrans/route";
+
+test("test QRIS notification posts only opted-in sandbox links", async () => {
+  const calls: Array<{ url: string; method?: string; body?: BodyInit | null }> = [];
+  const fakeFetch: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), method: init?.method, body: init?.body });
+    return new Response("ok", { status: 200 });
+  };
+  const qrUrl = "https://api.sandbox.midtrans.com/v2/qris/test/qr-code";
+  assert.equal(await sendTestQrisNotification(qrUrl, { enabled: false, environment: "sandbox", fetchImpl: fakeFetch }), false);
+  assert.equal(await sendTestQrisNotification("https://example.test/qr", { enabled: true, environment: "sandbox", fetchImpl: fakeFetch }), false);
+  assert.equal(await sendTestQrisNotification(qrUrl, { enabled: true, environment: "production", fetchImpl: fakeFetch }), false);
+  assert.equal(await sendTestQrisNotification(qrUrl, { enabled: true, environment: "sandbox", fetchImpl: fakeFetch }), true);
+  const alternateHostQrUrl = "https://api.midtrans.com/v4/qris/test/qr-code";
+  assert.equal(await sendTestQrisNotification(alternateHostQrUrl, { enabled: true, environment: "sandbox", fetchImpl: fakeFetch }), true);
+  assert.deepEqual(calls, [qrUrl, alternateHostQrUrl].map((url) => ({ url: "https://ntfy.sh/codex-completion-notification", method: "POST", body: `Midtrans QRIS: ${url}` })));
+});
 
 test("payment amount is authoritative and integer-only", () => {
   assert.equal(calculatePaymentAmount({ price: 250000, platformFee: 500, adminFee: 1000 }), 251500);

@@ -2,53 +2,56 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
+import { MessageSquare, Tag } from "lucide-react";
 import type { ListingStatus } from "@/types";
 import { toast } from "sonner";
 
-interface BuyPanelProps {
+export function BuyPanel({
+  listingId,
+  listingStatus,
+  compact = false,
+}: {
   listingId: string;
   listingStatus: ListingStatus;
   compact?: boolean;
-}
-
-export function BuyPanel({ listingId, listingStatus, compact = false }: BuyPanelProps) {
+}) {
   const router = useRouter();
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [opening, setOpening] = useState<"chat" | "offer" | null>(null);
 
-  function handleChatPenjual() {
-    if (listingStatus !== "AVAILABLE") return;
-    setIsNavigating(true);
-    toast.info("Membuka ruang chat negosiasi dengan penjual...");
-    
-    // Langsung arahkan pembeli ke ruang chat transaksi / negosiasi (Tab 1: Negosiasi)
-    router.push(`/user/transactions/trx_1`);
+  async function open(mode: "chat" | "offer") {
+    if (listingStatus !== "AVAILABLE" || opening) return;
+    setOpening(mode);
+    try {
+      const response = await fetch("/api/negotiations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId }),
+      });
+      const payload = await response.json();
+      if (response.status === 401) {
+        router.push(`/login?callbackUrl=${encodeURIComponent(`/listings/${listingId}`)}`);
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || "Ruang negosiasi belum dapat dibuka.");
+      router.push(`/user/negotiations/${payload.negotiation.id}${mode === "offer" ? "?focus=offer" : ""}`);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Ruang negosiasi belum dapat dibuka.");
+      setOpening(null);
+    }
   }
 
+  if (listingStatus !== "AVAILABLE") {
+    return <p className="rounded-xl bg-slate-100 p-3 text-center text-sm font-semibold text-slate-600">Listing tidak tersedia.</p>;
+  }
+  const size = compact ? "px-3 py-2.5 text-sm" : "px-4 py-3 text-sm sm:text-base";
   return (
-    <div>
-      {/* 💬 Tombol Tunggal: Chat Penjual */}
-      <button
-        type="button"
-        onClick={handleChatPenjual}
-        disabled={listingStatus !== "AVAILABLE" || isNavigating}
-        className={`w-full ${
-          compact ? "py-2.5 px-4 text-sm" : "py-3.5 px-4 text-base"
-        } bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer`}
-        aria-label="Chat Penjual"
-      >
-        {isNavigating ? (
-          <>
-            <Loader2 className={`${compact ? "w-4 h-4" : "w-5 h-5"} animate-spin`} /> Membuka Chat...
-          </>
-        ) : (
-          <>
-            <MessageSquare className={compact ? "w-4 h-4" : "w-5 h-5"} />
-            {listingStatus === "AVAILABLE" ? "Chat Penjual" : "Listing Tidak Tersedia"}
-          </>
-        )}
+    <div className="grid grid-cols-2 gap-2">
+      <button type="button" onClick={() => void open("chat")} disabled={opening !== null} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-600 bg-white font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50 ${size}`}>
+        <MessageSquare className="h-4 w-4" aria-hidden="true" /> {opening === "chat" ? "Membuka..." : "Chat seller"}
+      </button>
+      <button type="button" onClick={() => void open("offer")} disabled={opening !== null} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 font-bold text-white hover:bg-blue-700 disabled:opacity-50 ${size}`}>
+        <Tag className="h-4 w-4" aria-hidden="true" /> {opening === "offer" ? "Membuka..." : "Kirim tawaran"}
       </button>
     </div>
   );
 }
-

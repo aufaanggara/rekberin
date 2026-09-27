@@ -31,6 +31,7 @@ const publicAdminProfileSelect = {
 } as const;
 
 export const transactionInclude = {
+  escrowTransfer: true,
   listing: {
     include: {
       seller: { select: publicUserSelect },
@@ -139,8 +140,31 @@ export async function createTransactionForBuyer(input: {
   buyer: { id: string; role: Role };
   listingId: string;
   adminUserId: string;
+  negotiationId?: string;
 }) {
   return prisma.$transaction(async (db) => {
+    const negotiation = input.negotiationId
+      ? await (async () => {
+          await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${input.negotiationId}))`;
+          return db.negotiation.findUnique({ where: { id: input.negotiationId } });
+        })()
+      : null;
+    if (input.negotiationId && (
+      !negotiation ||
+      negotiation.buyerId !== input.buyer.id ||
+      negotiation.listingId !== input.listingId ||
+      negotiation.offerStatus !== "ACCEPTED" ||
+      negotiation.offeredPrice === null
+    )) {
+      throw new TransactionApiError(409, "Tawaran belum diterima penjual.");
+    }
+    if (input.negotiationId) {
+      const existing = await db.transaction.findUnique({
+        where: { negotiationId: input.negotiationId },
+        include: transactionInclude,
+      });
+      if (existing) return existing;
+    }
     const listing = await db.listing.findUnique({
       where: { id: input.listingId },
     });
@@ -179,13 +203,14 @@ export async function createTransactionForBuyer(input: {
       throw new TransactionApiError(409, "Listing baru saja diambil oleh transaksi lain.");
     }
 
-    return db.transaction.create({
+    const transaction = await db.transaction.create({
       data: {
+        negotiationId: input.negotiationId,
         listingId: listing.id,
         buyerId: input.buyer.id,
         sellerId: listing.sellerId,
         adminId: admin.id,
-        price: listing.price,
+        price: negotiation?.offeredPrice ?? listing.price,
         proofUrls: [],
         logs: [
           {
@@ -198,6 +223,23 @@ export async function createTransactionForBuyer(input: {
       },
       include: transactionInclude,
     });
+    if (input.negotiationId) {
+      const messages = await db.negotiationMessage.findMany({
+        where: { negotiationId: input.negotiationId },
+        orderBy: { createdAt: "asc" },
+      });
+      if (messages.length) {
+        await db.chatMessage.createMany({
+          data: messages.map((message) => ({
+            transactionId: transaction.id,
+            senderId: message.senderId,
+            message: message.message,
+            createdAt: message.createdAt,
+          })),
+        });
+      }
+    }
+    return transaction;
   }, TRANSACTION_CREATE_OPTIONS);
 }
 
@@ -282,6 +324,23 @@ export function toTransactionApiDto(
     proofUrls: transaction.proofUrls,
     logs: transaction.logs,
     checklist: transaction.checklist,
+    handover: {
+      startedAt: transaction.handoverStartedAt?.toISOString() ?? null,
+      deadlineAt: transaction.handoverDeadlineAt?.toISOString() ?? null,
+      pausedAt: transaction.handoverPausedAt?.toISOString() ?? null,
+      adminJoinedAt: transaction.adminJoinedAt?.toISOString() ?? null,
+      buyerWhatsapp: transaction.buyerWhatsapp,
+      sellerWhatsapp: transaction.sellerWhatsapp,
+    },
+    escrowTransfer: transaction.escrowTransfer
+      ? {
+          kind: transaction.escrowTransfer.kind,
+          amount: transaction.escrowTransfer.amount,
+          provider: transaction.escrowTransfer.provider,
+          status: transaction.escrowTransfer.status,
+          reference: transaction.escrowTransfer.reference,
+        }
+      : null,
     createdAt: transaction.createdAt.toISOString(),
     updatedAt: transaction.updatedAt.toISOString(),
     listing: toApiListing(transaction.listing),

@@ -68,3 +68,32 @@ export function PaymentModal({ isOpen, onClose, payment, listingTitle, isSyncing
     </Dialog.Portal>
   </Dialog.Root>;
 }
+
+export function PaymentDetails({ payment, listingTitle, isSyncing, onSync }: { payment: PaymentApiResponse; listingTitle: string; isSyncing: boolean; onSync: () => Promise<unknown> }) {
+  const [remaining, setRemaining] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const update = () => setRemaining(payment.expiresAt ? Math.max(0, Math.floor((Date.parse(payment.expiresAt) - Date.now()) / 1000)) : 0);
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [payment.expiresAt]);
+
+  return (
+    <div className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+        <strong>QRIS sandbox Midtrans.</strong> Gunakan <a href="https://simulator.sandbox.midtrans.com/openapi/qris/index" target="_blank" rel="noreferrer" className="font-bold underline">QRIS Simulator</a>; jangan bayar dengan aplikasi bank sungguhan.
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm"><span>Total pembayaran</span><strong className="text-lg text-blue-700">{formatRupiah(payment.amount)}</strong></div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+        <p className="mb-3 text-sm font-semibold text-slate-800">{listingTitle}</p>
+        {payment.qrCodeUrl ? <Image src={payment.qrCodeUrl} alt="QRIS sandbox untuk pembayaran" width={256} height={256} unoptimized className="mx-auto h-56 w-56 rounded-lg bg-white object-contain p-2" /> : <div className="flex h-56 items-center justify-center text-slate-500"><QrCode size={32} /></div>}
+        <p className="mt-3 text-sm text-slate-600">Sisa waktu: {String(Math.floor(remaining / 60)).padStart(2, "0")}:{String(remaining % 60).padStart(2, "0")}</p>
+        {payment.qrCodeUrl && <button type="button" onClick={() => void navigator.clipboard.writeText(payment.qrCodeUrl!).then(() => setCopied(true)).catch(() => setCopied(false))} className="mt-3 min-h-11 rounded-xl border border-blue-300 bg-white px-4 text-sm font-bold text-blue-700">{copied ? "Tautan tersalin" : "Salin tautan QRIS"}</button>}
+      </div>
+      <p className="text-center text-sm font-semibold text-slate-700">Status: {payment.status === "PENDING" ? "Menunggu pembayaran" : payment.status}</p>
+      <button type="button" onClick={() => void onSync()} disabled={isSyncing} className="min-h-11 w-full rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50">{isSyncing ? "Memeriksa..." : "Perbarui status"}</button>
+    </div>
+  );
+}

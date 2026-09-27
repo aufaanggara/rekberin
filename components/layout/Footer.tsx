@@ -5,7 +5,7 @@ export function Footer() {
   const paymentMethods = ["BCA", "Mandiri", "BNI", "BRI", "GoPay", "OVO", "DANA", "QRIS"];
 
   return (
-    <footer className="border-t border-slate-200 bg-white text-slate-600 mt-20">
+    <footer className="site-footer border-t border-slate-200 bg-white text-slate-600 mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand column */}

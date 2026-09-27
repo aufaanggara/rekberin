@@ -51,9 +51,9 @@ export function useTransaction(id: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const refetch = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    if (!silent) setError(null);
 
     try {
       const response = await fetch(`/api/transactions/${encodeURIComponent(id)}`, {
@@ -70,13 +70,13 @@ export function useTransaction(id: string) {
       const result = parseTransactionDetailResponse(payload);
       setData(result.transaction);
     } catch (requestError) {
-      setError(
+      if (!silent) setError(
         requestError instanceof Error
           ? requestError.message
           : "Detail transaksi tidak dapat dimuat."
       );
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [id]);
 
