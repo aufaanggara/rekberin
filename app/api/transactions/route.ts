@@ -1,27 +1,23 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import type {
-  CreateTransactionRequest,
-  TransactionApiDetailResponse,
-  TransactionApiListResponse,
-} from "@/types/transaction-api";
+import type { TransactionApiDetailResponse, TransactionApiListResponse } from "@/types/transaction-api";
+import { checkoutNegotiation, NegotiationError } from "@/lib/negotiations";
 import {
   assertBuyerCanStartTransaction,
-  createTransactionForBuyer,
   getAuthenticatedUser,
   toTransactionApiDto,
   TransactionApiError,
   transactionInclude,
 } from "@/lib/transactions";
 
-const createTransactionSchema: z.ZodType<CreateTransactionRequest> = z.object({
-  listingId: z.string().trim().min(1),
-  adminId: z.string().trim().min(1),
-});
+const createTransactionSchema = z.object({ negotiationId: z.string().trim().min(1) });
 
 function errorResponse(error: unknown) {
   if (error instanceof TransactionApiError) {
+    return NextResponse.json({ error: error.message }, { status: error.statusCode });
+  }
+  if (error instanceof NegotiationError) {
     return NextResponse.json({ error: error.message }, { status: error.statusCode });
   }
 
@@ -51,17 +47,15 @@ export async function POST(request: Request) {
   const parsed = createTransactionSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "listingId dan adminId wajib diisi." },
+      { error: "negotiationId wajib diisi." },
       { status: 400 }
     );
   }
 
   try {
-    const { listingId, adminId: adminUserId } = parsed.data;
-    const transaction = await createTransactionForBuyer({
-      buyer: user,
-      listingId,
-      adminUserId,
+    const transactionId = await checkoutNegotiation(parsed.data.negotiationId, user!);
+    const transaction = await prisma.transaction.findUniqueOrThrow({
+      where: { id: transactionId }, include: transactionInclude,
     });
 
     const response: TransactionApiDetailResponse = {

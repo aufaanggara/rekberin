@@ -22,7 +22,7 @@ export function Navbar() {
     userRole === "ADMIN" || userRole === "SUPER_ADMIN" ? "/admin" : "/user";
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+    <header className="site-navbar sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-16">
         {/* Brand Logo - Glints inspired clean style */}
         <Link href="/" className="flex items-center gap-2.5">

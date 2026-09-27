@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import { BuyerTransactionView } from "@/components/dashboard/BuyerTransactionView";
-import { SellerTransactionView } from "@/components/dashboard/SellerTransactionView";
+import { TransactionWorkspace } from "@/components/dashboard/TransactionWorkspace";
 import { Button } from "@/components/ui/Button";
 import { useTransaction } from "@/hooks/useTransactions";
-import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 
 function getViewerId(session: Awaited<ReturnType<typeof getSession>>) {
   const user = session?.user as { id?: unknown } | undefined;
@@ -117,11 +115,5 @@ export default function UserTransactionDetailPage({
     );
   }
 
-  const transaction = mapTransactionApiToViewModel(data);
-
-  if (viewerId === data.sellerId) {
-    return <SellerTransactionView initialTransaction={transaction} />;
-  }
-
-  return <BuyerTransactionView initialTransaction={transaction} />;
+  return <TransactionWorkspace transaction={data} viewerId={viewerId} role={viewerId === data.sellerId ? "seller" : "buyer"} onRefresh={refetch} />;
 }

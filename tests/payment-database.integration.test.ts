@@ -124,17 +124,22 @@ test("settlement confirms once, preserves listing state, and duplicate settlemen
   const gateway = new FakeGateway();
   await createOrRecoverPayment(ids.transaction, ids.buyer, gateway);
   gateway.next = "settlement";
+  const confirmationBeganAt = new Date();
   const settled = await syncPayment(ids.transaction, ids.buyer, gateway);
   assert.equal(settled?.status, "SETTLEMENT");
   const firstState = await prisma.transaction.findUniqueOrThrow({ where: { id: ids.transaction }, include: { listing: true } });
-  assert.equal(firstState.status, TransactionStatus.PAYMENT_CONFIRMED);
+  assert.equal(firstState.status, TransactionStatus.IN_HANDOVER);
+  assert.ok(firstState.handoverStartedAt);
+  assert.ok(firstState.handoverStartedAt!.getTime() >= confirmationBeganAt.getTime());
+  assert.equal(firstState.handoverDeadlineAt!.getTime() - firstState.handoverStartedAt!.getTime(), 2 * 60 * 60 * 1000);
   assert.equal(firstState.listing.status, ListingStatus.IN_TRANSACTION);
   assert.equal(firstState.logs.filter((entry) => typeof entry === "object" && entry !== null && "action" in entry && entry.action === "PAYMENT_CONFIRMED").length, 1);
+  assert.equal(firstState.logs.filter((entry) => typeof entry === "object" && entry !== null && "action" in entry && entry.action === "HANDOVER_STARTED").length, 1);
 
   await syncPayment(ids.transaction, ids.buyer, gateway);
   const secondState = await prisma.transaction.findUniqueOrThrow({ where: { id: ids.transaction }, include: { listing: true } });
   assert.equal(secondState.logs.filter((entry) => typeof entry === "object" && entry !== null && "action" in entry && entry.action === "PAYMENT_CONFIRMED").length, 1);
-  assert.equal(secondState.status, TransactionStatus.PAYMENT_CONFIRMED);
+  assert.equal(secondState.status, TransactionStatus.IN_HANDOVER);
 });
 
 test("terminal failure cancels pending transaction and releases listing", async () => {

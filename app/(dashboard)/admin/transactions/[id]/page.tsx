@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSession } from "next-auth/react";
-import { AdminTransactionView } from "@/components/dashboard/AdminTransactionView";
+import { TransactionWorkspace } from "@/components/dashboard/TransactionWorkspace";
 import { Button } from "@/components/ui/Button";
 import { useTransaction } from "@/hooks/useTransactions";
-import { mapTransactionApiToViewModel } from "@/lib/transaction-view-model";
 
 function StateCard({
   title,
@@ -89,5 +88,5 @@ export default function AdminTransactionDetailPage({ params }: { params: { id: s
     );
   }
 
-  return <AdminTransactionView initialTransaction={mapTransactionApiToViewModel(data)} />;
+  return <TransactionWorkspace transaction={data} viewerId={viewer.id} role="admin" onRefresh={refetch} />;
 }

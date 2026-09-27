@@ -11,6 +11,7 @@ export interface CurrentUser {
   username: string;
   fullName: string;
   avatarUrl: string | null;
+  whatsappNumber: string | null;
   role: "USER" | "ADMIN" | "SUPER_ADMIN";
   isVerified: boolean;
   createdAt: string;
@@ -59,7 +60,7 @@ function useCurrentUserRequest(enabled: boolean) {
     if (enabled) void refetch();
   }, [enabled, refetch]);
 
-  return { data, isLoading, error, refetch, session };
+  return { data, isLoading, error, refetch, session, sessionStatus: status };
 }
 
 const CurrentUserContext = createContext<ReturnType<typeof useCurrentUserRequest> | null>(null);

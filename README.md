@@ -1,50 +1,35 @@
-# Rekberin — Visual-First (v2, lengkap)
+# Rekberin
 
-Platform direktori & dashboard rekber untuk jual-beli akun eFootball. Tampilan dark-premium
-"Awwwards-grade" dengan GSAP ScrollTrigger, Lenis smooth-scroll, custom cursor, Three.js particle
-background, dan filter berbasis Radix UI.
+Marketplace akun game dengan negosiasi, pembayaran QRIS Midtrans, dan serah terima akun.
 
-## Status: semua item yang diminta sudah diimplementasikan
+## Menjalankan proyek
 
-| Item | Status | Lokasi |
-|---|---|---|
-| Palet warna premium + gradient text | ✅ | `app/globals.css`, `tailwind.config.ts` |
-| Lenis smooth-scroll | ✅ | `lib/lenis.ts` |
-| GSAP ScrollTrigger (reveal/stagger/count-up) | ✅ | `lib/gsap-animations.ts` |
-| Custom cursor (dot + ring, blend difference) | ✅ | `components/ui/Cursor.tsx` |
-| TrustScoreRing (SVG progress ring) | ✅ | `components/marketplace/TrustScoreRing.tsx` |
-| TrustBadge (pulse glow) | ✅ | `components/ui/TrustBadge.tsx` |
-| CrownBadge (top 3 admin) | ✅ | `components/ui/CrownBadge.tsx` |
-| `bg-grid` + `noise` texture | ✅ | `app/globals.css`, dipakai di Hero & direktori rekber |
-| Card glass hover (glow border + shadow) | ✅ | `.card-glass` di `app/globals.css` |
-| **Three.js particle field di Hero** | ✅ | `components/three/HeroScene.tsx`, `ParticleField.tsx` |
-| **Radix Slider (filter harga)** | ✅ | `components/ui/Slider.tsx`, dipakai di `FilterSidebar.tsx` |
-| **Radix Checkbox (filter status)** | ✅ | `components/ui/Checkbox.tsx` |
-| **Radix RadioGroup (filter rating)** | ✅ | `components/ui/RadioGroup.tsx` |
+1. Salin `.env.example` ke `.env.local` dan isi koneksi PostgreSQL, NextAuth, dan Midtrans.
+2. Jalankan `npm install` dan `npx prisma migrate deploy`.
+3. Jalankan `npm run dev`.
 
-## Sudah diverifikasi
+Perintah `dev` dan `start` menjalankan aplikasi bersama worker yang memeriksa batas konfirmasi handover setiap 30 detik. Untuk deployment yang tidak menjalankan proses worker terus menerus, jadwalkan `POST /api/jobs/handover-expiry` setidaknya setiap menit dengan header `Authorization: Bearer <HANDOVER_CRON_SECRET>`.
 
-- ✅ `npx tsc --noEmit` — bersih
-- ✅ `npm run build` — **compile berhasil penuh**, termasuk Three.js scene (client-only via `next/dynamic` + `ssr:false`) dan semua komponen Radix baru
-- ⚠️ Satu-satunya error di build sandbox saya: Prisma gagal download engine binary
-  (`binaries.prisma.sh` diblokir jaringan sandbox saya). Jalankan `npx prisma generate` di
-  komputer Anda sendiri — ini murni pembatasan sandbox saya, bukan bug kode.
+## Alur transaksi
 
-## Menjalankan
+1. Buyer membuka listing lalu memilih **Chat seller** atau **Kirim tawaran**. Di desktop chat dan penawaran berdampingan; di mobile keduanya tersedia sebagai tab.
+2. Buyer mengirim tawaran. Seller menerima atau menolak. Tawaran yang diterima dapat dilanjutkan buyer ke halaman chat dan pembayaran.
+3. Setelah Midtrans mengonfirmasi pembayaran, halaman menjadi chat dan serah terima. Batas konfirmasi buyer adalah dua jam sejak server mengonfirmasi pembayaran.
+4. Buyer dan seller dapat berbicara lewat chat web atau menyimpan nomor WhatsApp dan membuka percakapan di WhatsApp. Tidak ada formulir khusus untuk OTP, email, atau kata sandi akun.
+5. Buyer memilih **Akun diterima** atau **Laporkan masalah**. Laporan menambahkan admin transaksi ke chat serta menunda batas waktu. Admin dapat melanjutkan atau membatalkan transaksi.
+6. Konfirmasi buyer atau berakhirnya dua jam tanpa laporan menyelesaikan transaksi, menandai listing terjual, dan mencatat pencairan dummy ke seller. Pembatalan oleh admin mengembalikan listing ke tersedia dan mencatat pengembalian dummy ke buyer.
+
+Pencairan dan pengembalian dana **hanya simulasi yang tersimpan di database**. Belum ada transfer ke rekening atau e-wallet karena provider payout belum terhubung. Pembayaran QRIS menggunakan konfigurasi Midtrans proyek; gunakan sandbox untuk pengujian.
+
+Untuk pengujian lokal, set `MIDTRANS_QRIS_NTFY_TEST=true`. Saat tautan QRIS sandbox baru tersedia, server mengirim `Midtrans QRIS: <tautan>` melalui POST ke topik publik `https://ntfy.sh/codex-completion-notification`. Fitur ini mati secara default dan kegagalan notifikasi tidak menggagalkan pembayaran.
+
+## Pemeriksaan
 
 ```bash
-npm install
-cp .env.example .env.local   # isi kredensial Supabase Anda
-npx prisma generate
-npm run dev
+npm run typecheck
+npm test
+npm run test:integration
+npm run build
 ```
 
-## Yang masih dummy (belum berubah dari sebelumnya, di luar scope "visual")
-
-- Data (listing, admin, transaksi) — dari `data/dummy.ts`
-- Aksi tombol (beli, konfirmasi dana, dsb) — hanya toast notifikasi, belum menyimpan ke database
-- Auth — belum tersambung ke Supabase Auth sungguhan
-
-Semua kode integrasi backend (Supabase/Prisma/NextAuth) sudah siap di `lib/`, `prisma/schema.prisma`,
-dan `app/api/` — tinggal isi kredensial dan sambungkan hook di `hooks/useListings.ts` /
-`hooks/useTransactions.ts` ke query asli.
+Tes integrasi memerlukan PostgreSQL yang telah menerima migrasi terbaru. File migrasi ada di `prisma/migrations/20260926160000_marketplace_handover_flow`.

@@ -101,10 +101,10 @@ export default function UserTransactionsPage() {
   ).length;
 
   return (
-    <div className="min-w-0 flex-1">
+    <div className="min-w-0 flex-1 px-4 py-6 lg:px-0 lg:py-0">
       <div className="flex-1 space-y-6" aria-busy={isLoading || viewerId === undefined}>
         {/* Top Back Link */}
-        <div>
+        <div className="hidden lg:block">
           <Link
             href="/user"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 mb-1"

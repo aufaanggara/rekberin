@@ -6,6 +6,7 @@ import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvide
 import { ServiceWorkerRegister } from "@/components/providers/ServiceWorkerRegister";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
+import { UserActivityQueryProvider } from "@/components/providers/UserActivityQueryProvider";
 import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
@@ -46,11 +47,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-blue-100 selection:text-blue-700">
         <AuthSessionProvider>
-          <SmoothScrollProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </SmoothScrollProvider>
+          <UserActivityQueryProvider>
+            <SmoothScrollProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </SmoothScrollProvider>
+          </UserActivityQueryProvider>
         </AuthSessionProvider>
         <Toaster theme="light" position="top-center" richColors />
         <ServiceWorkerRegister />

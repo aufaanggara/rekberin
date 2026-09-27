@@ -1,9 +1,7 @@
 import type { Role, TransactionStatus, ListingStatus } from "@prisma/client";
 
 export interface CreateTransactionRequest {
-  listingId: string;
-  /** User.id for the assigned admin, not AdminProfile.id. */
-  adminId: string;
+  negotiationId: string;
 }
 
 export interface TransactionApiUser {
@@ -63,6 +61,21 @@ export interface TransactionApiResponse {
   proofUrls: string[];
   logs: unknown[];
   checklist: unknown;
+  handover?: {
+    startedAt: string | null;
+    deadlineAt: string | null;
+    pausedAt: string | null;
+    adminJoinedAt: string | null;
+    buyerWhatsapp: string | null;
+    sellerWhatsapp: string | null;
+  };
+  escrowTransfer?: {
+    kind: "SELLER_PAYOUT" | "BUYER_REFUND";
+    amount: number;
+    provider: string;
+    status: string;
+    reference: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   listing: TransactionApiListing;

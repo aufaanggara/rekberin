@@ -113,6 +113,7 @@ async function main() {
   server.stderr?.on("data", (chunk) => logs.push(String(chunk)));
 
   let listingId: string | null = null;
+  let negotiationId: string | null = null;
   let transactionId: string | null = null;
 
   try {
@@ -148,25 +149,38 @@ async function main() {
     listingId = listingPayload.listing.id;
 
     const buyer = await login(baseUrl, "buyer@test.com", "password123");
-    const adminsResponse = await request(baseUrl, buyer.jar, "/api/admins");
-    assert.equal(adminsResponse.status, 200);
-    const adminsPayload = (await adminsResponse.json()) as {
-      admins: Array<{ id: string; username: string }>;
-    };
-    const adminOption =
-      adminsPayload.admins.find((admin) => admin.username === "admin_rekber") ??
-      adminsPayload.admins[0];
-    assert.ok(adminOption);
-
-    const transactionResponse = await request(baseUrl, buyer.jar, "/api/transactions", {
+    const negotiationResponse = await request(baseUrl, buyer.jar, "/api/negotiations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, adminId: adminOption.id }),
+      body: JSON.stringify({ listingId }),
     });
-    assert.equal(transactionResponse.status, 201);
+    assert.equal(negotiationResponse.status, 200);
+    const negotiationPayload = (await negotiationResponse.json()) as { negotiation: { id: string } };
+    negotiationId = negotiationPayload.negotiation.id;
+    const buyerMessage = await request(baseUrl, buyer.jar, `/api/negotiations/${negotiationId}/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "Halo, akun masih tersedia?" }),
+    });
+    assert.equal(buyerMessage.status, 201);
+    const offerResponse = await request(baseUrl, buyer.jar, `/api/negotiations/${negotiationId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "OFFER", price: 240000 }),
+    });
+    assert.equal(offerResponse.status, 200);
+    const offer = (await offerResponse.json()) as { negotiation: { version: number } };
+    const acceptanceResponse = await request(baseUrl, seller.jar, `/api/negotiations/${negotiationId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ACCEPT", version: offer.negotiation.version }),
+    });
+    assert.equal(acceptanceResponse.status, 200);
+    const checkoutResponse = await request(baseUrl, buyer.jar, `/api/negotiations/${negotiationId}/checkout`, { method: "POST" });
+    assert.equal(checkoutResponse.status, 200);
+    transactionId = ((await checkoutResponse.json()) as { transactionId: string }).transactionId;
+    const transactionResponse = await request(baseUrl, buyer.jar, `/api/transactions/${transactionId}`);
+    assert.equal(transactionResponse.status, 200);
     const transactionPayload = (await transactionResponse.json()) as {
       transaction: {
         id: string;
+        price: number;
         status: string;
         listing: { status: string };
         buyerId: string;
@@ -174,7 +188,8 @@ async function main() {
         adminId: string;
       };
     };
-    transactionId = transactionPayload.transaction.id;
+    assert.equal(transactionPayload.transaction.id, transactionId);
+    assert.equal(transactionPayload.transaction.price, 240000);
     assert.equal(transactionPayload.transaction.status, "PENDING_PAYMENT");
     assert.equal(transactionPayload.transaction.listing.status, "IN_TRANSACTION");
 
@@ -207,6 +222,8 @@ async function main() {
       `/api/transactions/${transactionId}`
     );
     assert.equal(adminTransaction.status, 200);
+    const adminChatBeforeReport = await request(baseUrl, admin.jar, `/api/transactions/${transactionId}/messages`);
+    assert.equal(adminChatBeforeReport.status, 403);
 
     const unrelated = await login(baseUrl, "superadmin@rekberin.com", "password123");
     const unrelatedTransaction = await request(
@@ -214,7 +231,7 @@ async function main() {
       unrelated.jar,
       `/api/transactions/${transactionId}`
     );
-    assert.equal(unrelatedTransaction.status, 404);
+    assert.equal(unrelatedTransaction.status, 403);
 
     const buyerPage = await request(
       baseUrl,
@@ -229,11 +246,16 @@ async function main() {
     );
     assert.equal(adminPage.status, 200);
 
-    console.log(`E2E passed: listing ${listingId} -> transaction ${transactionId}`);
+    const migratedChat = await request(baseUrl, seller.jar, `/api/transactions/${transactionId}/messages`);
+    assert.equal(migratedChat.status, 200);
+    assert.match(await migratedChat.text(), /Halo, akun masih tersedia/);
+    console.log(`E2E passed: listing ${listingId} -> accepted offer -> transaction ${transactionId}`);
   } finally {
     if (transactionId) {
+      await prisma.chatMessage.deleteMany({ where: { transactionId } });
       await prisma.transaction.deleteMany({ where: { id: transactionId } });
     }
+    if (negotiationId) await prisma.negotiation.deleteMany({ where: { id: negotiationId } });
     if (listingId) {
       await prisma.listing.deleteMany({ where: { id: listingId } });
     }
